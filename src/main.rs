@@ -20,11 +20,7 @@ fn render() -> io::Result<()> {
     let mut delta_y: i16 = 1;
 
     loop {
-        term.move_cursor_to(usize::from(x), usize::from(y))?;
-        term.write_str(&format!("{}", style("@").color256(c)))?;
-        thread::sleep(Duration::from_millis(20));
-        term.clear_chars(1)?;
-
+        // Update locations
         if x >= width - 1 { delta_x = -1 }
         if y >= height - 1 { delta_y = -1 }
 
@@ -35,6 +31,12 @@ fn render() -> io::Result<()> {
 
         x = x.wrapping_add_signed(delta_x);
         y = y.wrapping_add_signed(delta_y);
+
+        // Render element
+        term.move_cursor_to(usize::from(x), usize::from(y))?;
+        term.write_str(&format!("{}", style("@").color256(c)))?;
+        thread::sleep(Duration::from_millis(20));
+        term.clear_chars(1)?;
     }
 }
 
