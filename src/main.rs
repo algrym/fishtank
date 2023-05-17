@@ -1,9 +1,8 @@
-use std::io;
 use std::thread;
 use std::time::Duration;
-use rand::Rng;
 
 use console::{Emoji, Term};
+use rand::Rng;
 use rand::rngs::ThreadRng;
 
 struct Mobile {
@@ -26,11 +25,11 @@ impl Mobile {
     }
 
     fn render(&mut self, term: &Term) {
-        term.move_cursor_to(usize::from(self.x), usize::from(self.y));
-        term.write_str(&format!("{}", Emoji("🦀", "@")));
+        term.move_cursor_to(usize::from(self.x), usize::from(self.y)).ok();
+        term.write_str(&format!("{}", Emoji("🦀", "@"))).ok();
     }
 
-    pub fn new(mut rng:ThreadRng, height: u16, width:u16) -> Self {
+    pub fn new(mut rng: ThreadRng, height: u16, width: u16) -> Self {
         Mobile {
             x: rng.gen_range(0..width),
             y: rng.gen_range(0..height),
@@ -40,25 +39,30 @@ impl Mobile {
     }
 }
 
-fn render() -> io::Result<()> {
+fn mob_runner() {
     let term = Term::stdout();
     let (height, width) = term.size();
     let rng = rand::thread_rng();
 
     term.set_title("Fishtank");
-    term.hide_cursor()?;
-    term.clear_screen()?;
+    term.hide_cursor().ok();
+    term.clear_screen().ok();
 
-    let mut mob = Mobile::new (rng, height, width);
+    let mut mob_vec = Vec::new();
+    for _i in 1..10 {
+        mob_vec.push(Mobile::new(rng.clone(), height, width));
+    }
 
     loop {
-        mob.update(height, width);
-        mob.render(&term);
+        for mob in mob_vec.iter_mut() {
+            mob.update(height, width);
+            mob.render(&term);
+        }
         thread::sleep(Duration::from_millis(50));
-        term.clear_screen()?;
+        term.clear_screen().ok();
     }
 }
 
 fn main() {
-    render().unwrap();
+    mob_runner();
 }
