@@ -4,6 +4,7 @@ use std::time::Duration;
 use rand::Rng;
 
 use console::{Emoji, Term};
+use rand::rngs::ThreadRng;
 
 struct Mobile {
     x: u16,
@@ -28,24 +29,27 @@ impl Mobile {
         term.move_cursor_to(usize::from(self.x), usize::from(self.y));
         term.write_str(&format!("{}", Emoji("🦀", "@")));
     }
+
+    pub fn new(mut rng:ThreadRng, height: u16, width:u16) -> Self {
+        Mobile {
+            x: rng.gen_range(0..width),
+            y: rng.gen_range(0..height),
+            delta_x: if rng.gen_bool(0.5) { 1 } else { -1 },
+            delta_y: if rng.gen_bool(0.5) { 1 } else { -1 },
+        }
+    }
 }
 
 fn render() -> io::Result<()> {
     let term = Term::stdout();
     let (height, width) = term.size();
-
-    let mut rng = rand::thread_rng();
+    let rng = rand::thread_rng();
 
     term.set_title("Fishtank");
     term.hide_cursor()?;
     term.clear_screen()?;
 
-    let mut mob = Mobile {
-        x: rng.gen_range(0..width),
-        y: rng.gen_range(0..height),
-        delta_x: if rng.gen_bool(0.5) { 1 } else { -1 },
-        delta_y: if rng.gen_bool(0.5) { 1 } else { -1 },
-        };
+    let mut mob = Mobile::new (rng, height, width);
 
     loop {
         mob.update(height, width);
