@@ -1,4 +1,5 @@
 use std::thread;
+use std::thread::Thread;
 use std::time::Duration;
 
 use console::{Emoji, Term};
@@ -45,7 +46,8 @@ struct Mobile {
 }
 
 impl Mobile {
-    fn update(&mut self, height: u16, width: u16) {
+    fn update(&mut self, mut rng: ThreadRng, height: u16, width: u16) {
+        let mut rng = rand::thread_rng();
         if self.last_wait < self.speed {
             self.last_wait += 1;
             return;
@@ -53,14 +55,14 @@ impl Mobile {
             self.last_wait = 0;
         }
 
-        if self.x >= width - 1 { self.delta_x = -1 }
-        if self.y >= height - 1 { self.delta_y = -1 }
+        if self.x > width - 1 { self.delta_x = -1 }
+        if self.y > height - 1 { self.delta_y = -1 }
 
         if self.x == 0 { self.delta_x = 1 }
         if self.y == 0 { self.delta_y = 1 }
 
-        self.x = self.x.wrapping_add_signed(self.delta_x);
-        self.y = self.y.wrapping_add_signed(self.delta_y);
+        if rng.gen_bool(0.7) { self.x = self.x.wrapping_add_signed(self.delta_x); }
+        if rng.gen_bool(0.3) { self.y = self.y.wrapping_add_signed(self.delta_y); }
     }
 
     fn render(&mut self, term: &Term) {
@@ -68,7 +70,8 @@ impl Mobile {
         term.write_str(&self.icon.to_string()).ok();
     }
 
-    pub fn new(mut rng: ThreadRng, height: u16, width: u16) -> Self {
+    pub fn new(height: u16, width: u16) -> Self {
+        let mut rng = rand::thread_rng();
         Mobile {
             icon: Emoji(FISH_EMOJI.choose(&mut rng).unwrap(), ".").to_string(),
             x: rng.gen_range(0..width),
@@ -84,7 +87,6 @@ impl Mobile {
 fn mob_runner() {
     let term = Term::stdout();
     let (height, width) = term.size();
-    let rng = rand::thread_rng();
 
     term.set_title("Fishtank");
     term.hide_cursor().ok();
@@ -92,12 +94,13 @@ fn mob_runner() {
 
     let mut mob_vec = Vec::new();
     for _i in 1..10 {
-        mob_vec.push(Mobile::new(rng.clone(), height, width));
+        mob_vec.push(Mobile::new(height, width));
     }
 
     loop {
+        let mut rng = rand::thread_rng();
         for mob in mob_vec.iter_mut() {
-            mob.update(height, width);
+            mob.update(rng.clone(), height, width);
             mob.render(&term);
         }
         thread::sleep(Duration::from_millis(10));
