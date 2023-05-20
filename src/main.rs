@@ -1,8 +1,10 @@
 use std::thread;
 use std::time::Duration;
 
+use bevy::app::App;
 use console::Term;
-use mobile::Mobile;
+
+use crate::mobile::Mobile;
 
 mod mobile;
 mod direction;
@@ -31,5 +33,8 @@ fn mob_runner() {
 }
 
 fn main() {
-    mob_runner();
+    App::new()
+        .add_startup_system(mob_runner)
+        .run();
 }
+
