@@ -1,40 +1,31 @@
-use std::thread;
-use std::time::Duration;
+use bevy::prelude::*;
 
-use bevy::app::App;
-use console::Term;
+#[derive(Component)]
+struct MobileFish {
+    name: String,
+}
 
-use crate::mobile::Mobile;
+#[derive(Component)]
+struct Location {
+    x: i32,
+    y: i32,
+}
 
-mod mobile;
-mod direction;
-
-fn mob_runner() {
-    let term = Term::stdout();
-    let (height, width) = term.size();
-
-    term.set_title("Fishtank");
-    term.hide_cursor().ok();
-    term.clear_screen().ok();
-
-    let mut mob_vec = Vec::new();
-    for _i in 1..10 {
-        mob_vec.push(Mobile::new(height, width));
+fn add_fish(mut commands: Commands) {
+    for i in 0..9 {
+        commands.spawn((MobileFish { name: i.to_string() }, Location { x: i, y: i }));
     }
+}
 
-    loop {
-        for mob in mob_vec.iter_mut() {
-            mob.update(height, width);
-            mob.render(&term);
-        }
-        thread::sleep(Duration::from_millis(10));
-        term.clear_screen().ok();
+fn show_fish(query: Query<(&MobileFish, &Location)>) {
+    for (fish, loc) in &query {
+        println!("Fish {} at {},{}", fish.name, loc.x, loc.y);
     }
 }
 
 fn main() {
     App::new()
-        .add_startup_system(mob_runner)
+        .add_startup_system(add_fish)
+        .add_system(show_fish)
         .run();
 }
-
