@@ -5,32 +5,7 @@ use console::Term;
 use mobile::Mobile;
 
 mod mobile;
-
-enum _Direction {
-    North,
-    NorthEast,
-    East,
-    SouthEast,
-    South,
-    SouthWest,
-    West,
-    NorthWest,
-}
-
-impl _Direction {
-    fn _value(&self) -> (i8, i8) {
-        match *self {
-            _Direction::North => (0, 1),
-            _Direction::NorthEast => (1, 1),
-            _Direction::East => (1, 0),
-            _Direction::SouthEast => (1, -1),
-            _Direction::South => (0, -1),
-            _Direction::SouthWest => (-1, -1),
-            _Direction::West => (-1, 0),
-            _Direction::NorthWest => (-1, 1),
-        }
-    }
-}
+mod direction;
 
 fn mob_runner() {
     let term = Term::stdout();
