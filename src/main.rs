@@ -1,6 +1,13 @@
-use bevy::{prelude::*, render::camera::ScalingMode};
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin, SystemInformationDiagnosticsPlugin};
+use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin,
+                 LogDiagnosticsPlugin,
+                 SystemInformationDiagnosticsPlugin},
+    prelude::*,
+    render::camera::ScalingMode,
+};
 use rand::Rng;
+
+const _TIMESTEP_1_PER_SECOND: f32 = 1.0;
 
 #[derive(Component)]
 struct MobileFish {
@@ -30,9 +37,8 @@ fn spawn_fish(mut commands: Commands) {
 
 fn show_fish(query: Query<(&MobileFish, &Location)>) {
     for (fish, loc) in &query {
-        println!("Fish {} at {},{}", fish.name, loc.x, loc.y);
+        info!("🐟{}({},{}) ", fish.name, loc.x, loc.y);
     }
-    println!();
 }
 
 fn setup(mut commands: Commands) {
@@ -43,8 +49,8 @@ fn setup(mut commands: Commands) {
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.8)))
-        .add_plugins(DefaultPlugins.set(WindowPlugin {
+        .insert_resource(ClearColor(Color::rgb(0.1, 0.1, 0.8))) // background color
+        .add_plugins(DefaultPlugins.set(WindowPlugin { // set up window
             primary_window: Some(Window {
                 fit_canvas_to_parent: true, // fill the entire browser window
                 prevent_default_event_handling: false, // don't hijack keyboard shortcuts like F5, F6, F12, Ctrl+R etc.
@@ -54,7 +60,7 @@ fn main() {
             ..default()
         }))
         .add_startup_systems((setup, spawn_fish))
-        .add_system(show_fish)
+        .add_system(show_fish) // TODO: these run too frequently
 
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
