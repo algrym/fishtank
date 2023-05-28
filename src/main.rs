@@ -4,11 +4,13 @@ use bevy::{
     },
     prelude::*,
     sprite::*,
+    time::common_conditions::on_fixed_timer,
+    utils::Duration,
     window::WindowResolution,
 };
 use rand::Rng;
 
-const _TIMESTEP_1_PER_SECOND: f32 = 1.0;
+const TIMESTEP_1_PER_SECOND: u64 = 1;
 
 const WINDOW_WIDTH: f32 = 1024.0;
 const WINDOW_HEIGHT: f32 = 720.0;
@@ -28,9 +30,11 @@ struct Location {
     y: i32,
 }
 
-fn spawn_fish(mut commands: Commands,
-              mut meshes: ResMut<Assets<Mesh>>,
-              mut materials: ResMut<Assets<ColorMaterial>>) {
+fn spawn_fish(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     let mut rng = rand::thread_rng();
     for i in 0..9 {
         commands.spawn((
@@ -61,19 +65,25 @@ fn show_fish(query: Query<(&MobileFish, &Location)>) {
     }
 }
 
-fn setup(mut commands: Commands) {
-    let mut camera_bundle = Camera2dBundle::default();
-    // camera_bundle.projection.scaling_mode = ScalingMode::FixedVertical(20.);
-    commands.spawn(camera_bundle);
+fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2dBundle::default());
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("assets/red.png"),
+        ..default()
+    });
+    commands.spawn(SpriteBundle {
+        texture: asset_server.load("assets/green.png"),
+        ..default()
+    });
 }
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::BLUE)) // background color
+        .insert_resource(ClearColor(Color::MIDNIGHT_BLUE)) // background color
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             // set up window
             primary_window: Some(Window {
-                fit_canvas_to_parent: true,            // fill the entire browser window
+                fit_canvas_to_parent: true, // fill the entire browser window
                 resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
                 resizable: false,
                 prevent_default_event_handling: false, // don't hijack keyboard shortcuts like F5, F6, F12, Ctrl+R etc.
@@ -83,10 +93,14 @@ fn main() {
             ..default()
         }))
         .add_startup_systems((setup, spawn_fish))
-        .add_system(show_fish) // TODO: these run too frequently
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
+        .add_system(
+            show_fish
+                .in_schedule(CoreSchedule::FixedUpdate)
+                .run_if(on_fixed_timer(Duration::from_secs(TIMESTEP_1_PER_SECOND))),
+        )
         .run();
 }
