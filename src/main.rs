@@ -12,12 +12,14 @@ use rand::Rng;
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
-const WINDOW_WIDTH: f32 = 1024.0;
-const WINDOW_HEIGHT: f32 = 720.0;
+const WINDOW_WIDTH: i32 = 1024;
+const WINDOW_HEIGHT: i32 = 720;
 
 // Remember, in Bevy's coordinate system the origin is at the center of the screen
-const WINDOW_BOTTOM_Y: f32 = WINDOW_HEIGHT / -2.0;
-const WINDOW_LEFT_X: f32 = WINDOW_WIDTH / -2.0;
+const WINDOW_BOTTOM_Y: i32 = WINDOW_HEIGHT / -2;
+const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
+const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
+const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
 
 #[derive(Component)]
 struct MobileFish {
@@ -42,15 +44,19 @@ fn spawn_fish(
                 name: i.to_string(),
             },
             Location {
-                x: rng.gen_range(0..9),
-                y: rng.gen_range(0..9),
+                x: rng.gen_range(WINDOW_LEFT_X..WINDOW_RIGHT_X),
+                y: rng.gen_range(WINDOW_BOTTOM_Y..WINDOW_TOP_Y),
             },
         ));
         commands.spawn(MaterialMesh2dBundle {
             mesh: meshes.add(shape::Circle::default().into()).into(),
             material: materials.add(ColorMaterial::from(Color::LIME_GREEN)),
             transform: Transform {
-                translation: Vec3::new(WINDOW_LEFT_X + 100.0, WINDOW_BOTTOM_Y + 30.0, 0.1),
+                translation: Vec3::new(
+                    (WINDOW_LEFT_X as f32) + 100.0,
+                    (WINDOW_BOTTOM_Y as f32) + 30.0,
+                    0.1,
+                ),
                 scale: Vec3::new(30.0, 30.0, 1.0),
                 ..Default::default()
             },
@@ -81,7 +87,7 @@ fn main() {
             // set up window
             primary_window: Some(Window {
                 fit_canvas_to_parent: true, // fill the entire browser window
-                resolution: WindowResolution::new(WINDOW_WIDTH, WINDOW_HEIGHT),
+                resolution: WindowResolution::new((WINDOW_WIDTH as f32), (WINDOW_HEIGHT as f32)),
                 resizable: false,
                 prevent_default_event_handling: false, // don't hijack keyboard shortcuts like F5, F6, F12, Ctrl+R etc.
                 title: "Fishtank! - ajw@ajw.io".to_string(),
