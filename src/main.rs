@@ -87,7 +87,7 @@ fn main() {
             // set up window
             primary_window: Some(Window {
                 fit_canvas_to_parent: true, // fill the entire browser window
-                resolution: WindowResolution::new((WINDOW_WIDTH as f32), (WINDOW_HEIGHT as f32)),
+                resolution: WindowResolution::new(WINDOW_WIDTH as f32, WINDOW_HEIGHT as f32),
                 resizable: false,
                 prevent_default_event_handling: false, // don't hijack keyboard shortcuts like F5, F6, F12, Ctrl+R etc.
                 title: "Fishtank! - ajw@ajw.io".to_string(),
