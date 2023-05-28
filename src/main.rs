@@ -50,7 +50,7 @@ fn spawn_fish(
             mesh: meshes.add(shape::Circle::default().into()).into(),
             material: materials.add(ColorMaterial::from(Color::LIME_GREEN)),
             transform: Transform {
-                translation: Vec3::new(WINDOW_LEFT_X + 100.0, WINDOW_BOTTOM_Y + 30.0, 0.0),
+                translation: Vec3::new(WINDOW_LEFT_X + 100.0, WINDOW_BOTTOM_Y + 30.0, 0.1),
                 scale: Vec3::new(30.0, 30.0, 1.0),
                 ..Default::default()
             },
@@ -68,12 +68,9 @@ fn show_fish(query: Query<(&MobileFish, &Location)>) {
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(Camera2dBundle::default());
     commands.spawn(SpriteBundle {
-        texture: asset_server.load("assets/red.png"),
-        ..default()
-    });
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("assets/green.png"),
-        ..default()
+        texture: asset_server.load("dark.png"),
+        transform: Transform::from_scale(Vec3::new(1.0, 1.0, -1.0)),
+        ..Default::default()
     });
 }
 
