@@ -7,6 +7,7 @@ use bevy::{
     time::common_conditions::on_fixed_timer,
     utils::Duration,
     window::WindowResolution,
+    math::f32::Vec3,
 };
 use rand::Rng;
 
@@ -34,8 +35,7 @@ struct Location {
 
 fn spawn_fish(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let mut rng = rand::thread_rng();
     for i in 0..9 {
@@ -48,19 +48,14 @@ fn spawn_fish(
                 y: rng.gen_range(WINDOW_BOTTOM_Y..WINDOW_TOP_Y),
             },
         ));
-        commands.spawn(MaterialMesh2dBundle {
-            mesh: meshes.add(shape::Circle::default().into()).into(),
-            material: materials.add(ColorMaterial::from(Color::LIME_GREEN)),
+        commands.spawn(SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(
-                    (WINDOW_LEFT_X as f32) + 100.0,
-                    (WINDOW_BOTTOM_Y as f32) + 30.0,
-                    0.1,
-                ),
-                scale: Vec3::new(30.0, 30.0, 1.0),
+                translation: Vec3::new(0.0, -220.0, 0.1),
+                scale: Vec3::new(0.1, 0.1, 1.0),
                 ..Default::default()
             },
-            ..default()
+            texture: asset_server.load("red.png"),
+            ..Default::default()
         });
     }
 }
@@ -78,6 +73,10 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         transform: Transform::from_scale(Vec3::new(1.0, 1.0, -1.0)),
         ..Default::default()
     });
+}
+
+fn update_fish() {
+    info!("update_fish");
 }
 
 fn main() {
@@ -100,6 +99,7 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
+        .add_system(update_fish)
         .add_system(
             show_fish
                 .in_schedule(CoreSchedule::FixedUpdate)
