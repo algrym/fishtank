@@ -60,6 +60,12 @@ fn spawn_fish(
     }
 }
 
+fn print_position_system(query: Query<&Transform>) {
+    for transform in &query {
+        println!("position: {:?}", transform.translation);
+    }
+}
+
 fn show_fish(query: Query<(&MobileFish, &Location)>) {
     for (fish, loc) in &query {
         info!("🐟{}({},{}) ", fish.name, loc.x, loc.y);
@@ -99,7 +105,7 @@ fn main() {
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
-        .add_system(update_fish)
+        .add_system(print_position_system)
         .add_system(
             show_fish
                 .in_schedule(CoreSchedule::FixedUpdate)
