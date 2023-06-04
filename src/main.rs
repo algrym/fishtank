@@ -28,6 +28,8 @@ const SPRITE_SHEET_MAX: usize = SPRITE_SHEET_COLUMNS * SPRITE_SHEET_ROWS;
 const SPRITE_SHEET_FISH_INDEX_LOW: usize = 68;
 const SPRITE_SHEET_FISH_INDEX_HIGH: usize = SPRITE_SHEET_FISH_INDEX_LOW + 10;
 
+const WATER_DRAG: f32 = 1.0;
+
 #[derive(Component)]
 struct MobileFish {
     name: String,
@@ -102,13 +104,35 @@ fn update_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) 
             fish_direction.horizontal_speed,
             fish_direction.vertical_speed
         );
-        fish_direction.horizontal_speed += rng.gen_range(-0.1..0.1);
-        fish_direction.vertical_speed += rng.gen_range(-0.1..0.1);
 
         if fish_direction.horizontal_speed > 0.0 {
             fish_transform.scale = Vec3::new(1.0, 1.0, 1.0);
+            fish_direction.horizontal_speed += rng.gen_range(-1.0..1.5);
+            if fish_direction.horizontal_speed < 0.0 {
+                fish_direction.horizontal_speed = 0.0;
+            }
         } else if fish_direction.horizontal_speed < 0.0 {
             fish_transform.scale = Vec3::new(-1.0, 1.0, 1.0);
+            fish_direction.horizontal_speed -= rng.gen_range(-1.0..1.5);
+            if fish_direction.horizontal_speed > 0.0 {
+                fish_direction.horizontal_speed = 0.0;
+            }
+        } else {
+            fish_direction.horizontal_speed += rng.gen_range(-0.5..0.5);
+        }
+
+        if fish_direction.vertical_speed > 0.0 {
+            fish_direction.vertical_speed += rng.gen_range(-0.5..1.0);
+            if fish_direction.vertical_speed < 0.0 {
+                fish_direction.vertical_speed = 0.0;
+            }
+        } else if fish_direction.vertical_speed < 0.0 {
+            fish_direction.vertical_speed -= rng.gen_range(-0.5..1.0);
+            if fish_direction.vertical_speed > 0.0 {
+                fish_direction.vertical_speed = 0.0;
+            }
+        } else {
+            fish_direction.vertical_speed += rng.gen_range(-0.5..0.5);
         }
     }
 }
@@ -128,13 +152,17 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
         if (fish_transform.translation.x > WINDOW_RIGHT_X as f32)
             || (fish_transform.translation.x < WINDOW_LEFT_X as f32)
         {
-            fish_direction.horizontal_speed *= -1.0;
+            fish_direction.horizontal_speed *= -0.9;
+        } else {
+            fish_direction.horizontal_speed *= 0.9;
         }
 
         if (fish_transform.translation.y > WINDOW_TOP_Y as f32)
             || (fish_transform.translation.y < WINDOW_BOTTOM_Y as f32)
         {
-            fish_direction.vertical_speed *= -1.0;
+            fish_direction.vertical_speed *= -0.9;
+        } else {
+            fish_direction.vertical_speed *= 0.9;
         }
     }
 }
