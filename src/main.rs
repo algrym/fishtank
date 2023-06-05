@@ -8,8 +8,11 @@ use bevy::{
     utils::Duration,
     window::WindowResolution,
 };
-use rand::Rng;
-use rand::seq::SliceRandom;
+use rand::{
+    Rng,
+    seq::IteratorRandom,
+    seq::SliceRandom,
+};
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
@@ -36,6 +39,7 @@ const FISH_OFFSET_BLUE: usize = 72;
 const FISH_OFFSET_ORANGE: usize = 74;
 const FISH_OFFSET_PUFFER: usize = 95;
 const FISH_OFFSET_EEL: usize = 97;
+const DECOR_OFFSET_BUBBLE: usize = 117;
 const FISH_OFFSETS: [usize; 6] = [
     FISH_OFFSET_GREEN,
     FISH_OFFSET_PURPLE,
@@ -49,6 +53,9 @@ const FISH_OFFSETS: [usize; 6] = [
 struct MobileFish {
     name: String,
 }
+
+#[derive(Component)]
+struct MobileBubble {}
 
 #[derive(Component)]
 struct Direction {
@@ -184,8 +191,36 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     }
 }
 
-fn spawn_bubble() {
+fn spawn_bubble(mut commands: Commands,
+                asset_server: Res<AssetServer>,
+                mut query: Query<(&Transform, With<MobileFish>)>,
+                mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
+    let mut rng = rand::thread_rng();
+    // HERE: this should get a random element from the query or exit the function
+    let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return };
+    info!("🫧🐟{}", query.iter().len());
+
+    // TODO: WRONG! This should use the existing TextureAtlas and SpriteSheet
+    let texture_handle = asset_server.load("fishTileSheet.png");
+    let texture_atlas =
+        TextureAtlas::from_grid(texture_handle,
+                                Vec2::new(SPRITE_SHEET_CELL_WIDTH, SPRITE_SHEET_CELL_WIDTH),
+                                SPRITE_SHEET_COLUMNS, SPRITE_SHEET_ROWS,
+                                Some(Vec2::new(SPRITE_SHEET_CELL_PADDING, SPRITE_SHEET_CELL_PADDING)),
+                                None);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
     info!("🫧");
+    commands.spawn((
+        MobileBubble {},
+        SpriteSheetBundle {
+            transform: fish_transform.clone(),
+            texture_atlas: texture_atlas_handle.clone(),
+            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE, ..default() },
+            ..Default::default()
+        },
+    ));
 }
 
 fn main() {
