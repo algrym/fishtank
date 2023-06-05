@@ -9,6 +9,7 @@ use bevy::{
     window::WindowResolution,
 };
 use rand::Rng;
+use rand::seq::SliceRandom;
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
@@ -21,14 +22,28 @@ const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
 
-const SPRITE_SHEET_CELL_WIDTH: f32 = 64.0;
+const SPRITE_SHEET_CELL_WIDTH: f32 = 62.0;
+const SPRITE_SHEET_CELL_PADDING: f32 = 2.0;
 const SPRITE_SHEET_COLUMNS: usize = 17;
 const SPRITE_SHEET_ROWS: usize = 7;
-const SPRITE_SHEET_MAX: usize = SPRITE_SHEET_COLUMNS * SPRITE_SHEET_ROWS;
-const SPRITE_SHEET_FISH_INDEX_LOW: usize = 68;
-const SPRITE_SHEET_FISH_INDEX_HIGH: usize = SPRITE_SHEET_FISH_INDEX_LOW + 10;
 
-const WATER_DRAG: f32 = 1.0;
+const MAX_NUMBER_FISH: usize = 10;
+
+// Names for all the fish sprite offsets in the texture atlas
+const FISH_OFFSET_GREEN: usize = 68;
+const FISH_OFFSET_PURPLE: usize = 70;
+const FISH_OFFSET_BLUE: usize = 72;
+const FISH_OFFSET_ORANGE: usize = 74;
+const FISH_OFFSET_PUFFER: usize = 95;
+const FISH_OFFSET_EEL: usize = 97;
+const FISH_OFFSETS: [usize; 6] = [
+    FISH_OFFSET_GREEN,
+    FISH_OFFSET_PURPLE,
+    FISH_OFFSET_BLUE,
+    FISH_OFFSET_ORANGE,
+    FISH_OFFSET_PUFFER,
+    FISH_OFFSET_EEL,
+];
 
 #[derive(Component)]
 struct MobileFish {
@@ -49,11 +64,13 @@ fn spawn_fish(mut commands: Commands,
     let texture_atlas =
         TextureAtlas::from_grid(texture_handle,
                                 Vec2::new(SPRITE_SHEET_CELL_WIDTH, SPRITE_SHEET_CELL_WIDTH),
-                                SPRITE_SHEET_COLUMNS, SPRITE_SHEET_ROWS, None, None);
+                                SPRITE_SHEET_COLUMNS, SPRITE_SHEET_ROWS,
+                                Some(Vec2::new(SPRITE_SHEET_CELL_PADDING, SPRITE_SHEET_CELL_PADDING)),
+                                None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     let mut rng = rand::thread_rng();
-    for i in SPRITE_SHEET_FISH_INDEX_LOW..SPRITE_SHEET_FISH_INDEX_HIGH {
+    for i in 0..MAX_NUMBER_FISH {
         info!("spawn_fish {}", i);
         commands.spawn((
             MobileFish {
@@ -73,7 +90,7 @@ fn spawn_fish(mut commands: Commands,
                     ..Default::default()
                 },
                 texture_atlas: texture_atlas_handle.clone(),
-                sprite: TextureAtlasSprite { index: i, ..default() },
+                sprite: TextureAtlasSprite { index: *FISH_OFFSETS.choose(&mut rng).unwrap(), ..default() },
                 ..Default::default()
             },
         ));
@@ -167,8 +184,8 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     }
 }
 
-fn tick_fish() {
-    info!("Tick!");
+fn spawn_bubble() {
+    info!("🫧");
 }
 
 fn main() {
@@ -201,7 +218,7 @@ fn main() {
         .add_system(move_fish)
         .add_system(update_fish)
         .add_system(
-            tick_fish
+            spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(TIMESTEP_1_PER_SECOND))),
         )
