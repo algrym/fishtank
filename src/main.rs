@@ -8,11 +8,7 @@ use bevy::{
     utils::Duration,
     window::WindowResolution,
 };
-use rand::{
-    Rng,
-    seq::IteratorRandom,
-    seq::SliceRandom,
-};
+use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
@@ -31,6 +27,7 @@ const SPRITE_SHEET_COLUMNS: usize = 17;
 const SPRITE_SHEET_ROWS: usize = 7;
 
 const MAX_NUMBER_FISH: usize = 10;
+const BUBBLE_RISE_SPEED: f32 = 1.0;
 
 // Names for all the fish sprite offsets in the texture atlas
 const FISH_OFFSET_GREEN: usize = 68;
@@ -193,13 +190,12 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
 
 fn spawn_bubble(mut commands: Commands,
                 asset_server: Res<AssetServer>,
-                mut query: Query<(&Transform, With<MobileFish>)>,
+                query: Query<(&Transform, With<MobileFish>)>,
                 mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
     let mut rng = rand::thread_rng();
-    // HERE: this should get a random element from the query or exit the function
-    let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return };
-    info!("🫧🐟{}", query.iter().len());
+    let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
+    info!("🫧🐟{} {}", fish_transform.translation, query.iter().len());
 
     // TODO: WRONG! This should use the existing TextureAtlas and SpriteSheet
     let texture_handle = asset_server.load("fishTileSheet.png");
@@ -216,11 +212,23 @@ fn spawn_bubble(mut commands: Commands,
         MobileBubble {},
         SpriteSheetBundle {
             transform: fish_transform.clone(),
-            texture_atlas: texture_atlas_handle.clone(),
+            texture_atlas: texture_atlas_handle,
             sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE, ..default() },
             ..Default::default()
         },
     ));
+}
+
+fn move_bubble(mut commands: Commands,
+               mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+    for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
+        bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
+        bubble_transform.translation.y += BUBBLE_RISE_SPEED;
+
+        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
+            commands.entity(bubble_entity).despawn();
+        }
+    }
 }
 
 fn main() {
@@ -257,5 +265,6 @@ fn main() {
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(TIMESTEP_1_PER_SECOND))),
         )
+        .add_system(move_bubble)
         .run();
 }
