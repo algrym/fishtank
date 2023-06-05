@@ -223,7 +223,8 @@ fn move_bubble(mut commands: Commands,
                mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
     for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
         bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
-        bubble_transform.translation.y += BUBBLE_RISE_SPEED;
+        bubble_transform.translation.y += (BUBBLE_RISE_SPEED +
+            thread_rng().gen_range(-1.0..1.0));
 
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
             commands.entity(bubble_entity).despawn();
