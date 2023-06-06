@@ -8,6 +8,7 @@ use bevy::{
     utils::Duration,
     window::WindowResolution,
 };
+use bevy_asset_loader::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
@@ -21,11 +22,6 @@ const WINDOW_BOTTOM_Y: i32 = WINDOW_HEIGHT / -2;
 const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
-
-const SPRITE_SHEET_CELL_WIDTH: f32 = 62.0;
-const SPRITE_SHEET_CELL_PADDING: f32 = 2.0;
-const SPRITE_SHEET_COLUMNS: usize = 17;
-const SPRITE_SHEET_ROWS: usize = 7;
 
 const MAX_NUMBER_FISH: usize = 10;
 const BUBBLE_RISE_SPEED: f32 = 1.0;
@@ -61,26 +57,14 @@ struct Direction {
     vertical_speed: f32,
 }
 
-#[derive(Resource)]
-struct FishSpriteSheet(Handle<TextureAtlas>);
-
-fn load_textures(mut commands: Commands,
-                 asset_server: Res<AssetServer>,
-                 mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let texture_handle = asset_server.load("fishTileSheet.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle,
-                                Vec2::new(SPRITE_SHEET_CELL_WIDTH, SPRITE_SHEET_CELL_WIDTH),
-                                SPRITE_SHEET_COLUMNS, SPRITE_SHEET_ROWS,
-                                Some(Vec2::new(SPRITE_SHEET_CELL_PADDING, SPRITE_SHEET_CELL_PADDING)),
-                                None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
-
-    commands.insert_resource(FishSpriteSheet(texture_atlas_handle));
+#[derive(AssetCollection, Resource)]
+struct FishSpriteSheet {
+    // sadly, the "derive" crashes if I use the const's.
+    #[asset(texture_atlas(tile_size_x = 63.0, tile_size_y = 63.0, columns = 17, rows = 7, padding_x = 1.0, padding_y = 1.0))]
+    #[asset(path = "fishTileSheet.png")]
+    sprite: Handle<TextureAtlas>,
 }
 
-// TODO: Runtime exception when this tries to use Res<FishSpriteSheet> before its ready
 fn spawn_fish(mut commands: Commands,
               texture_atlas_handle: Res<FishSpriteSheet>,
 ) {
@@ -104,7 +88,7 @@ fn spawn_fish(mut commands: Commands,
                     ),
                     ..Default::default()
                 },
-                texture_atlas: texture_atlas_handle.0.clone(),
+                texture_atlas: texture_atlas_handle.sprite.clone(),
                 sprite: TextureAtlasSprite { index: *FISH_OFFSETS.choose(&mut rng).unwrap(), ..default() },
                 ..Default::default()
             },
@@ -212,7 +196,7 @@ fn spawn_bubble(mut commands: Commands,
         MobileBubble {},
         SpriteSheetBundle {
             transform: *fish_transform,
-            texture_atlas: texture_atlas_handle.0.clone(),
+            texture_atlas: texture_atlas_handle.sprite.clone(),
             sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE, ..default() },
             ..Default::default()
         },
@@ -254,10 +238,10 @@ fn main() {
                     ..default()
                 }),
         )
+        .init_collection::<FishSpriteSheet>()
         .add_startup_systems((setup_camera,
                               setup_background,
-                              load_textures))
-        .add_startup_system(spawn_fish)
+                              spawn_fish))
 
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
