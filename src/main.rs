@@ -8,9 +8,8 @@ use bevy::{
     utils::Duration,
     window::WindowResolution,
 };
-use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
-
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
@@ -62,10 +61,13 @@ struct Direction {
     vertical_speed: f32,
 }
 
-fn spawn_fish(mut commands: Commands,
-              asset_server: Res<AssetServer>,
-              mut texture_atlases: ResMut<Assets<TextureAtlas>>)
-{
+#[derive(Resource)]
+struct FishSpriteSheet(Handle<TextureAtlas>);
+
+fn load_textures(mut commands: Commands,
+                 asset_server: Res<AssetServer>,
+                 mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
     let texture_handle = asset_server.load("fishTileSheet.png");
     let texture_atlas =
         TextureAtlas::from_grid(texture_handle,
@@ -75,7 +77,14 @@ fn spawn_fish(mut commands: Commands,
                                 None);
     let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
-    let mut rng = rand::thread_rng();
+    commands.insert_resource(FishSpriteSheet(texture_atlas_handle));
+}
+
+// TODO: Runtime exception when this tries to use Res<FishSpriteSheet> before its ready
+fn spawn_fish(mut commands: Commands,
+              texture_atlas_handle: Res<FishSpriteSheet>,
+) {
+    let mut rng = thread_rng();
     for i in 0..MAX_NUMBER_FISH {
         info!("spawn_fish {}", i);
         commands.spawn((
@@ -95,7 +104,7 @@ fn spawn_fish(mut commands: Commands,
                     ),
                     ..Default::default()
                 },
-                texture_atlas: texture_atlas_handle.clone(),
+                texture_atlas: texture_atlas_handle.0.clone(),
                 sprite: TextureAtlasSprite { index: *FISH_OFFSETS.choose(&mut rng).unwrap(), ..default() },
                 ..Default::default()
             },
@@ -117,7 +126,7 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 fn update_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
 
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
@@ -191,30 +200,19 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
 }
 
 fn spawn_bubble(mut commands: Commands,
-                asset_server: Res<AssetServer>,
+                texture_atlas_handle: Res<FishSpriteSheet>,
                 query: Query<(&Transform, With<MobileFish>)>,
-                mut texture_atlases: ResMut<Assets<TextureAtlas>>,
 ) {
-    let mut rng = rand::thread_rng();
+    let mut rng = thread_rng();
     let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
     info!("🫧🐟{} {}", fish_transform.translation, query.iter().len());
-
-    // TODO: WRONG! This should use the existing TextureAtlas and SpriteSheet
-    let texture_handle = asset_server.load("fishTileSheet.png");
-    let texture_atlas =
-        TextureAtlas::from_grid(texture_handle,
-                                Vec2::new(SPRITE_SHEET_CELL_WIDTH, SPRITE_SHEET_CELL_WIDTH),
-                                SPRITE_SHEET_COLUMNS, SPRITE_SHEET_ROWS,
-                                Some(Vec2::new(SPRITE_SHEET_CELL_PADDING, SPRITE_SHEET_CELL_PADDING)),
-                                None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
 
     info!("🫧");
     commands.spawn((
         MobileBubble {},
         SpriteSheetBundle {
-            transform: fish_transform.clone(),
-            texture_atlas: texture_atlas_handle,
+            transform: *fish_transform,
+            texture_atlas: texture_atlas_handle.0.clone(),
             sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE, ..default() },
             ..Default::default()
         },
@@ -225,8 +223,8 @@ fn move_bubble(mut commands: Commands,
                mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
     for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
         bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
-        bubble_transform.translation.y += (BUBBLE_RISE_SPEED +
-            thread_rng().gen_range(-1.0..1.0));
+        bubble_transform.translation.y += BUBBLE_RISE_SPEED +
+            thread_rng().gen_range(-1.0..1.0);
 
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
             commands.entity(bubble_entity).despawn();
@@ -256,7 +254,10 @@ fn main() {
                     ..default()
                 }),
         )
-        .add_startup_systems((setup_camera, setup_background, spawn_fish))
+        .add_startup_systems((setup_camera,
+                              setup_background,
+                              load_textures))
+        .add_startup_system(spawn_fish)
 
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
