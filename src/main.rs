@@ -10,6 +10,8 @@ use bevy::{
 };
 use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
+
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
 const WINDOW_WIDTH: i32 = 1024;
@@ -255,10 +257,13 @@ fn main() {
                 }),
         )
         .add_startup_systems((setup_camera, setup_background, spawn_fish))
+
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(WorldInspectorPlugin::new())
+
         .add_system(move_fish)
         .add_system(update_fish)
         .add_system(
