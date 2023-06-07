@@ -28,13 +28,15 @@ const MAX_NUMBER_FISH: usize = 10;
 const BUBBLE_RISE_SPEED: f32 = 1.0;
 
 // Names for all the fish sprite offsets in the texture atlas
-const FISH_OFFSET_GREEN: usize = 68;
-const FISH_OFFSET_PURPLE: usize = 70;
-const FISH_OFFSET_BLUE: usize = 72;
-const FISH_OFFSET_ORANGE: usize = 74;
-const FISH_OFFSET_PUFFER: usize = 95;
-const FISH_OFFSET_EEL: usize = 97;
-const DECOR_OFFSET_BUBBLE: usize = 117;
+const FISH_OFFSET_GREEN: usize = 69;
+const FISH_OFFSET_PURPLE: usize = 71;
+const FISH_OFFSET_BLUE: usize = 73;
+const FISH_OFFSET_ORANGE: usize = 75;
+const FISH_OFFSET_PUFFER: usize = 96;
+const FISH_OFFSET_EEL: usize = 98;
+const DECOR_OFFSET_BUBBLE_BIG_OPEN: usize = 117;
+const DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
+const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119; // TODO: Fix runtime crash.
 const FISH_OFFSETS: [usize; 6] = [
     FISH_OFFSET_GREEN,
     FISH_OFFSET_PURPLE,
@@ -199,7 +201,7 @@ fn spawn_bubble(mut commands: Commands,
         SpriteSheetBundle {
             transform: *fish_transform,
             texture_atlas: texture_atlas_handle.sprite.clone(),
-            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE, ..default() },
+            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_SMALL_FILLED, ..default() },
             ..Default::default()
         },
     ));
