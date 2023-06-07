@@ -15,10 +15,11 @@ use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 const TIMESTEP_1_PER_SECOND: u64 = 1;
 
 const WINDOW_WIDTH: i32 = 1024;
-const WINDOW_HEIGHT: i32 = 720;
+const WINDOW_HEIGHT: i32 = 768;
 
 // Remember, in Bevy's coordinate system the origin is at the center of the screen
 const WINDOW_BOTTOM_Y: i32 = WINDOW_HEIGHT / -2;
+const WINDOW_BOTTOM_Y_SEAFLOOR: i32 = (WINDOW_BOTTOM_Y as f32 * 0.6) as i32;
 const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
@@ -68,6 +69,7 @@ struct FishSpriteSheet {
 fn spawn_fish(mut commands: Commands,
               texture_atlas_handle: Res<FishSpriteSheet>,
 ) {
+    info!("spawn_fish: bottom_y={} seafloor={}", WINDOW_BOTTOM_Y, WINDOW_BOTTOM_Y_SEAFLOOR);
     let mut rng = thread_rng();
     for i in 0..MAX_NUMBER_FISH {
         info!("spawn_fish {}", i);
@@ -83,7 +85,7 @@ fn spawn_fish(mut commands: Commands,
                 transform: Transform {
                     translation: Vec3::new(
                         rng.gen_range(WINDOW_LEFT_X..WINDOW_RIGHT_X) as f32,
-                        rng.gen_range(WINDOW_BOTTOM_Y..WINDOW_TOP_Y) as f32,
+                        rng.gen_range(WINDOW_BOTTOM_Y_SEAFLOOR..WINDOW_TOP_Y) as f32,
                         0.1,
                     ),
                     ..Default::default()
@@ -103,13 +105,13 @@ fn setup_camera(mut commands: Commands) {
 fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(SpriteBundle {
         // Background
-        texture: asset_server.load("dark.png"),
+        texture: asset_server.load("fishBackground.png"),
         transform: Transform::from_scale(Vec3::new(1.0, 1.0, -1.0)),
         ..Default::default()
     });
 }
 
-fn update_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
+fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     let mut rng = thread_rng();
 
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
@@ -174,7 +176,7 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
         }
 
         if (fish_transform.translation.y > WINDOW_TOP_Y as f32)
-            || (fish_transform.translation.y < WINDOW_BOTTOM_Y as f32)
+            || (fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32)
         {
             fish_direction.vertical_speed *= -0.9;
         } else {
@@ -250,7 +252,7 @@ fn main() {
         .add_plugin(WorldInspectorPlugin::new())
 
         .add_system(move_fish)
-        .add_system(update_fish)
+        .add_system(fish_logic)
         .add_system(
             spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
