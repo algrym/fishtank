@@ -3,14 +3,19 @@ A fish tank in your ~~console~~ GUI, written in [Rust](https://www.rust-lang.org
 
 (It isn't really a console application anymore, but now it uses [Bevy](https://bevyengine.org/) ... which is _awesome._)
 
-To make this run:
+## To see the fishes:
 
+* First set up a [Rust build environment](https://www.rust-lang.org/learn/get-started).
+
+* Then download, build, and run as follows:
 ```
 git checkout https://github.com/algrym/fishtank
 cd fishtank
 cargo run --release
 ```
-The build takes about 10 minutes, according to Dependabot.
+The build takes about 6.5 minutes, according to Dependabot.
+
+Thanks to [Kenney.nl](https://kenney.nl/) for the fish art.
 
 <sub>We don't need no stinking _badges._ :badger:<sub>
 
