@@ -9,7 +9,7 @@ use bevy::{
     window::WindowResolution,
 };
 use bevy_asset_loader::prelude::*;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+// use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
 const TIMESTEP_1_PER_SECOND: u64 = 1;
@@ -35,7 +35,7 @@ const FISH_OFFSET_ORANGE: usize = 75;
 const FISH_OFFSET_PUFFER: usize = 96;
 const FISH_OFFSET_EEL: usize = 98;
 const DECOR_OFFSET_BUBBLE_BIG_OPEN: usize = 117;
-const DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
+const _DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
 const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119; // TODO: Fix runtime crash.
 const FISH_OFFSETS: [usize; 6] = [
     FISH_OFFSET_GREEN,
@@ -201,7 +201,7 @@ fn spawn_bubble(mut commands: Commands,
         SpriteSheetBundle {
             transform: *fish_transform,
             texture_atlas: texture_atlas_handle.sprite.clone(),
-            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_SMALL_FILLED, ..default() },
+            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_BIG_OPEN, ..default() },
             ..Default::default()
         },
     ));
@@ -251,7 +251,7 @@ fn main() {
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(WorldInspectorPlugin::new())
+        // .add_plugin(WorldInspectorPlugin::new())
 
         .add_system(move_fish)
         .add_system(fish_logic)
