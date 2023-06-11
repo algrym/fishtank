@@ -9,6 +9,7 @@ _(in no particular order)_
   * Schooling like [Boids](https://en.wikipedia.org/wiki/Boids)
 * Make fish movement less jittery
   * Address acceleration and drag
+  * https://lib.rs/crates/bevy_easings
 * Fish should move toward a destination
 * Fish should look toward their destination
 * Fish should notice collisions
