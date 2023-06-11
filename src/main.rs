@@ -12,7 +12,7 @@ use bevy_asset_loader::prelude::*;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
 
-const TIMESTEP_1_PER_SECOND: u64 = 1;
+const BUBBLE_SPAWNS_IN_SECS: u64 = 2;
 
 const WINDOW_WIDTH: i32 = 1024;
 const WINDOW_HEIGHT: i32 = 768;
@@ -36,7 +36,8 @@ const FISH_OFFSET_PUFFER: usize = 96;
 const FISH_OFFSET_EEL: usize = 98;
 const DECOR_OFFSET_BUBBLE_BIG_OPEN: usize = 117;
 const _DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
-const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119; // TODO: Fix runtime crash.
+const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119;
+// TODO: Fix runtime crash.
 const FISH_OFFSETS: [usize; 6] = [
     FISH_OFFSET_GREEN,
     FISH_OFFSET_PURPLE,
@@ -169,17 +170,21 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
         fish_transform.translation.x += fish_direction.horizontal_speed;
         fish_transform.translation.y += fish_direction.vertical_speed;
 
-        if (fish_transform.translation.x > WINDOW_RIGHT_X as f32)
-            || (fish_transform.translation.x < WINDOW_LEFT_X as f32)
-        {
+        if (fish_transform.translation.x > WINDOW_RIGHT_X as f32) {
+            fish_transform.translation.x = WINDOW_RIGHT_X as f32;
+            fish_direction.horizontal_speed *= -0.9;
+        } else if (fish_transform.translation.x < WINDOW_LEFT_X as f32) {
+            fish_transform.translation.x = WINDOW_LEFT_X as f32;
             fish_direction.horizontal_speed *= -0.9;
         } else {
             fish_direction.horizontal_speed *= 0.9;
         }
 
-        if (fish_transform.translation.y > WINDOW_TOP_Y as f32)
-            || (fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32)
-        {
+        if (fish_transform.translation.y > WINDOW_TOP_Y as f32) {
+            fish_transform.translation.y = WINDOW_TOP_Y as f32;
+            fish_direction.vertical_speed *= -0.9;
+        } else if (fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32) {
+            fish_transform.translation.y = WINDOW_BOTTOM_Y_SEAFLOOR as f32;
             fish_direction.vertical_speed *= -0.9;
         } else {
             fish_direction.vertical_speed *= 0.9;
@@ -258,7 +263,7 @@ fn main() {
         .add_system(
             spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
-                .run_if(on_fixed_timer(Duration::from_secs(TIMESTEP_1_PER_SECOND))),
+                .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
         )
         .add_system(move_bubble)
         .run();
