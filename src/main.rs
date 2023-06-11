@@ -170,20 +170,20 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
         fish_transform.translation.x += fish_direction.horizontal_speed;
         fish_transform.translation.y += fish_direction.vertical_speed;
 
-        if (fish_transform.translation.x > WINDOW_RIGHT_X as f32) {
+        if fish_transform.translation.x > WINDOW_RIGHT_X as f32 {
             fish_transform.translation.x = WINDOW_RIGHT_X as f32;
             fish_direction.horizontal_speed *= -0.9;
-        } else if (fish_transform.translation.x < WINDOW_LEFT_X as f32) {
+        } else if fish_transform.translation.x < WINDOW_LEFT_X as f32 {
             fish_transform.translation.x = WINDOW_LEFT_X as f32;
             fish_direction.horizontal_speed *= -0.9;
         } else {
             fish_direction.horizontal_speed *= 0.9;
         }
 
-        if (fish_transform.translation.y > WINDOW_TOP_Y as f32) {
+        if fish_transform.translation.y > WINDOW_TOP_Y as f32 {
             fish_transform.translation.y = WINDOW_TOP_Y as f32;
             fish_direction.vertical_speed *= -0.9;
-        } else if (fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32) {
+        } else if fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32 {
             fish_transform.translation.y = WINDOW_BOTTOM_Y_SEAFLOOR as f32;
             fish_direction.vertical_speed *= -0.9;
         } else {
