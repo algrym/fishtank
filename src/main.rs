@@ -10,7 +10,7 @@ use bevy::{
 };
 use bevy_asset_loader::prelude::*;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use rand::{Rng, seq::IteratorRandom, seq::SliceRandom, thread_rng};
+use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 
 const BUBBLE_SPAWNS_IN_SECS: u64 = 2;
 
@@ -24,7 +24,9 @@ const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
 
-const MAX_NUMBER_FISH: usize = 10;
+const MIN_NUMBER_FISH: usize = 5;
+const MAX_NUMBER_FISH: usize = 20;
+
 const BUBBLE_RISE_SPEED: f32 = 1.0;
 
 // Names for all the fish sprite offsets in the texture atlas
@@ -35,9 +37,9 @@ const FISH_OFFSET_ORANGE: usize = 75;
 const FISH_OFFSET_PUFFER: usize = 96;
 const FISH_OFFSET_EEL: usize = 98;
 const DECOR_OFFSET_BUBBLE_BIG_OPEN: usize = 117;
-const _DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
-const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119;
-// TODO: Fix runtime crash.
+const DECOR_OFFSET_BUBBLE_SMALL_FILLED: usize = 118;
+const _DECOR_OFFSET_BUBBLE_SMALL_OPEN: usize = 119; // TODO: Fix runtime crash when accessing element 119
+
 const FISH_OFFSETS: [usize; 6] = [
     FISH_OFFSET_GREEN,
     FISH_OFFSET_PURPLE,
@@ -61,20 +63,37 @@ struct Direction {
     vertical_speed: f32,
 }
 
+#[derive(Component)]
+struct AnimationIndices {
+    first: usize,
+    last: usize,
+}
+
+#[derive(Component, Deref, DerefMut)]
+struct AnimationTimer(Timer);
+
 #[derive(AssetCollection, Resource)]
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
-    #[asset(texture_atlas(tile_size_x = 63.0, tile_size_y = 63.0, columns = 17, rows = 7, padding_x = 1.0, padding_y = 1.0))]
+    #[asset(texture_atlas(
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
+    ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
 }
 
-fn spawn_fish(mut commands: Commands,
-              texture_atlas_handle: Res<FishSpriteSheet>,
-) {
-    info!("spawn_fish: bottom_y={} seafloor={}", WINDOW_BOTTOM_Y, WINDOW_BOTTOM_Y_SEAFLOOR);
+fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>) {
+    info!(
+        "spawn_fish: bottom_y={} seafloor={}",
+        WINDOW_BOTTOM_Y, WINDOW_BOTTOM_Y_SEAFLOOR
+    );
     let mut rng = thread_rng();
-    for i in 0..MAX_NUMBER_FISH {
+    for i in 0..rng.gen_range(MIN_NUMBER_FISH..MAX_NUMBER_FISH) {
         info!("spawn_fish {}", i);
         commands.spawn((
             MobileFish {
@@ -94,7 +113,10 @@ fn spawn_fish(mut commands: Commands,
                     ..Default::default()
                 },
                 texture_atlas: texture_atlas_handle.sprite.clone(),
-                sprite: TextureAtlasSprite { index: *FISH_OFFSETS.choose(&mut rng).unwrap(), ..default() },
+                sprite: TextureAtlasSprite {
+                    index: *FISH_OFFSETS.choose(&mut rng).unwrap(),
+                    ..default()
+                },
                 ..Default::default()
             },
         ));
@@ -192,35 +214,65 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     }
 }
 
-fn spawn_bubble(mut commands: Commands,
-                texture_atlas_handle: Res<FishSpriteSheet>,
-                query: Query<(&Transform, With<MobileFish>)>,
+fn spawn_bubble(
+    mut commands: Commands,
+    texture_atlas_handle: Res<FishSpriteSheet>,
+    query: Query<(&Transform, With<MobileFish>)>,
 ) {
     let mut rng = thread_rng();
+    let animation_indices = AnimationIndices {
+        first: DECOR_OFFSET_BUBBLE_SMALL_FILLED,
+        last: DECOR_OFFSET_BUBBLE_BIG_OPEN,
+    };
     let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
     info!("🫧🐟{} {}", fish_transform.translation, query.iter().len());
 
-    info!("🫧");
     commands.spawn((
         MobileBubble {},
         SpriteSheetBundle {
             transform: *fish_transform,
             texture_atlas: texture_atlas_handle.sprite.clone(),
-            sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_BIG_OPEN, ..default() },
+            // sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_BIG_OPEN, ..default() },
+            sprite: TextureAtlasSprite::new(animation_indices.first),
             ..Default::default()
         },
+        animation_indices,
+        AnimationTimer(Timer::from_seconds(rng.gen_range(1.0..3.0), TimerMode::Repeating)),
     ));
 }
 
-fn move_bubble(mut commands: Commands,
-               mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+fn move_bubble(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
     for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
         bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
-        bubble_transform.translation.y += BUBBLE_RISE_SPEED +
-            thread_rng().gen_range(-1.0..1.0);
+        bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
 
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
             commands.entity(bubble_entity).despawn();
+        }
+    }
+}
+
+fn animate_sprite(
+    time: Res<Time>,
+    mut query: Query<(
+        &AnimationIndices,
+        &mut AnimationTimer,
+        &mut TextureAtlasSprite,
+    )>,
+) {
+    for (indices, mut timer, mut sprite) in &mut query {
+        timer.tick(time.delta());
+        if timer.just_finished() {
+            sprite.index = if sprite.index == indices.last {
+                indices.first
+            } else if indices.first < indices.last {
+                sprite.index + 1
+            } else if indices.first > indices.last {
+                sprite.index - 1
+            } else {
+                // I'm not sure we can get here, but eh.
+                sprite.index
+            };
         }
     }
 }
@@ -248,16 +300,13 @@ fn main() {
                 }),
         )
         .init_collection::<FishSpriteSheet>()
-        .add_startup_systems((setup_camera,
-                              setup_background,
-                              spawn_fish))
-
+        .add_startup_systems((setup_camera, setup_background, spawn_fish))
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // .add_plugin(WorldInspectorPlugin::new())
-
+        .add_system(animate_sprite)
         .add_system(move_fish)
         .add_system(fish_logic)
         .add_system(
