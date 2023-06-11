@@ -12,3 +12,6 @@ _(in no particular order)_
 * Fish should move toward a destination
 * Fish should look toward their destination
 * Fish should notice collisions
+* Maybe bubbles should be particle systems?
+* Improve the CI pipeline
+  * https://github.com/bevyengine/bevy_github_ci_template
