@@ -6,7 +6,7 @@ _(in no particular order)_
 * Switch to 3D: Add depth?
 * Species of Fish:
   * Same colors means same behavior
-  * Schooling?
+  * Schooling like [Boids](https://en.wikipedia.org/wiki/Boids)
 * Make fish movement less jittery
   * Address acceleration and drag
 * Fish should move toward a destination
