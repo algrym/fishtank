@@ -141,9 +141,10 @@ fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
 
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
-            "update_fish 🐟{}({}) h{} v{}",
+            "update_fish 🐟{}@({}) s{} h{} v{}",
             fish.name,
             fish_transform.translation,
+            fish_transform.scale,
             fish_direction.horizontal_speed,
             fish_direction.vertical_speed
         );
@@ -225,14 +226,13 @@ fn spawn_bubble(
         last: DECOR_OFFSET_BUBBLE_BIG_OPEN,
     };
     let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
-    info!("🫧🐟{} {}", fish_transform.translation, query.iter().len());
+    info!("🫧🐟{} #{}", fish_transform.translation, query.iter().len());
 
     commands.spawn((
         MobileBubble {},
         SpriteSheetBundle {
             transform: *fish_transform,
             texture_atlas: texture_atlas_handle.sprite.clone(),
-            // sprite: TextureAtlasSprite { index: DECOR_OFFSET_BUBBLE_BIG_OPEN, ..default() },
             sprite: TextureAtlasSprite::new(animation_indices.first),
             ..Default::default()
         },
