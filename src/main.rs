@@ -11,6 +11,7 @@ use bevy::{
 use bevy_asset_loader::prelude::*;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
+use bevy_rapier2d::prelude::*;
 
 const BUBBLE_SPAWNS_IN_SECS: u64 = 2;
 
@@ -305,6 +306,12 @@ fn main() {
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        .add_plugin(RapierDebugRenderPlugin::default())
+        .insert_resource(RapierConfiguration {
+            gravity: Vect::NEG_Y,
+            ..Default::default()
+        })
         // .add_plugin(WorldInspectorPlugin::new())
         .add_system(animate_sprite)
         .add_system(move_fish)
