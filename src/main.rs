@@ -183,11 +183,10 @@ fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
 fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
-            "move_fish 🐟{}({}) h{} v{}",
+            "move_fish 🐟{}({}) speed{}",
             fish.name,
             fish_transform.translation,
-            fish_direction.speed.x,
-            fish_direction.speed.y
+            fish_direction.speed,
         );
         fish_transform.translation.x += fish_direction.speed.x;
         fish_transform.translation.y += fish_direction.speed.y;
