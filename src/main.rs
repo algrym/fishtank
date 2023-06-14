@@ -10,8 +10,8 @@ use bevy::{
 };
 use bevy_asset_loader::prelude::*;
 // use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 use bevy_rapier2d::prelude::*;
+use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 
 const BUBBLE_SPAWNS_IN_SECS: u64 = 2;
 
@@ -100,8 +100,7 @@ fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>
                 name: i.to_string(),
             },
             Direction {
-                speed: Vec2::new(rng.gen_range(-5.0..5.0),
-                                 rng.gen_range(-5.0..5.0)),
+                speed: Vec2::new(rng.gen_range(-5.0..5.0), rng.gen_range(-5.0..5.0)),
             },
             SpriteSheetBundle {
                 transform: Transform {
@@ -142,12 +141,13 @@ fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
             "update_fish 🐟{}@({}) scale{} speed{}",
-            fish.name,
-            fish_transform.translation,
-            fish_transform.scale,
-            fish_direction.speed
+            fish.name, fish_transform.translation, fish_transform.scale, fish_direction.speed
         );
 
+        // If the fish is starting to move off the edge of the screen,
+        // change direction and make the fish face the opposite
+        // left/right direction.
+        // The fish should be more likely to keep facing in the same direction.
         if fish_direction.speed.x > 0.0 {
             fish_transform.scale = Vec3::new(1.0, 1.0, 1.0);
             fish_direction.speed.x += rng.gen_range(-1.0..1.5);
@@ -180,17 +180,16 @@ fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     }
 }
 
-fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
+fn fish_move(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
             "move_fish 🐟{}({}) speed{}",
-            fish.name,
-            fish_transform.translation,
-            fish_direction.speed,
+            fish.name, fish_transform.translation, fish_direction.speed,
         );
         fish_transform.translation.x += fish_direction.speed.x;
         fish_transform.translation.y += fish_direction.speed.y;
 
+        // Constrain the fish to stay inside the window
         if fish_transform.translation.x > WINDOW_RIGHT_X as f32 {
             fish_transform.translation.x = WINDOW_RIGHT_X as f32;
             fish_direction.speed.x *= -0.9;
@@ -223,9 +222,11 @@ fn spawn_bubble(
         first: DECOR_OFFSET_BUBBLE_SMALL_FILLED,
         last: DECOR_OFFSET_BUBBLE_BIG_OPEN,
     };
+    // Pick a random fish
     let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
     info!("🫧🐟{} #{}", fish_transform.translation, query.iter().len());
 
+    // Spawn a bubble
     commands.spawn((
         MobileBubble {},
         SpriteSheetBundle {
@@ -235,15 +236,20 @@ fn spawn_bubble(
             ..Default::default()
         },
         animation_indices,
-        AnimationTimer(Timer::from_seconds(rng.gen_range(1.0..3.0), TimerMode::Repeating)),
+        AnimationTimer(Timer::from_seconds(
+            rng.gen_range(1.0..3.0),
+            TimerMode::Repeating,
+        )),
     ));
 }
 
-fn move_bubble(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+fn bubble_move(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
     for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
+        // Move each bubble upwards ...
         bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
         bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
 
+        // ... until it reaches the surface and despawns.
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
             commands.entity(bubble_entity).despawn();
         }
@@ -291,18 +297,21 @@ fn main() {
                         ),
                         resizable: false,
                         prevent_default_event_handling: false, // don't hijack keyboard shortcuts like F5, F6, F12, Ctrl+R etc.
-                        title: "Fishtank! - ajw@ajw.io".to_string(),
+                        title: format!("Fishtank! v{} - ajw@ajw.io", env!("CARGO_PKG_VERSION")),
                         ..default()
                     }),
                     ..default()
                 }),
         )
+        // Ensure assets are loaded before using them
         .init_collection::<FishSpriteSheet>()
         .add_startup_systems((setup_camera, setup_background, spawn_fish))
+        // Load diagnostic plugins
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // Load physics plugin
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
         .add_plugin(RapierDebugRenderPlugin::default())
         .insert_resource(RapierConfiguration {
@@ -311,13 +320,13 @@ fn main() {
         })
         // .add_plugin(WorldInspectorPlugin::new())
         .add_system(animate_sprite)
-        .add_system(move_fish)
+        .add_system(fish_move)
         .add_system(fish_logic)
-        .add_system(
+        .add_system( // Bubbles only get spawned on a time
             spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
         )
-        .add_system(move_bubble)
+        .add_system(bubble_move)
         .run();
 }
