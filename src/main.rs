@@ -60,8 +60,7 @@ struct MobileBubble {}
 
 #[derive(Component)]
 struct Direction {
-    horizontal_speed: f32,
-    vertical_speed: f32,
+    speed: Vec2,
 }
 
 #[derive(Component)]
@@ -101,8 +100,8 @@ fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>
                 name: i.to_string(),
             },
             Direction {
-                horizontal_speed: rng.gen_range(-5.0..5.0),
-                vertical_speed: rng.gen_range(-5.0..5.0),
+                speed: Vec2::new(rng.gen_range(-5.0..5.0),
+                                 rng.gen_range(-5.0..5.0)),
             },
             SpriteSheetBundle {
                 transform: Transform {
@@ -142,42 +141,41 @@ fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
 
     for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
         debug!(
-            "update_fish 🐟{}@({}) s{} h{} v{}",
+            "update_fish 🐟{}@({}) scale{} speed{}",
             fish.name,
             fish_transform.translation,
             fish_transform.scale,
-            fish_direction.horizontal_speed,
-            fish_direction.vertical_speed
+            fish_direction.speed
         );
 
-        if fish_direction.horizontal_speed > 0.0 {
+        if fish_direction.speed.x > 0.0 {
             fish_transform.scale = Vec3::new(1.0, 1.0, 1.0);
-            fish_direction.horizontal_speed += rng.gen_range(-1.0..1.5);
-            if fish_direction.horizontal_speed < 0.0 {
-                fish_direction.horizontal_speed = 0.0;
+            fish_direction.speed.x += rng.gen_range(-1.0..1.5);
+            if fish_direction.speed.x < 0.0 {
+                fish_direction.speed.x = 0.0;
             }
-        } else if fish_direction.horizontal_speed < 0.0 {
+        } else if fish_direction.speed.x < 0.0 {
             fish_transform.scale = Vec3::new(-1.0, 1.0, 1.0);
-            fish_direction.horizontal_speed -= rng.gen_range(-1.0..1.5);
-            if fish_direction.horizontal_speed > 0.0 {
-                fish_direction.horizontal_speed = 0.0;
+            fish_direction.speed.x -= rng.gen_range(-1.0..1.5);
+            if fish_direction.speed.x > 0.0 {
+                fish_direction.speed.x = 0.0;
             }
         } else {
-            fish_direction.horizontal_speed += rng.gen_range(-0.5..0.5);
+            fish_direction.speed.x += rng.gen_range(-0.5..0.5);
         }
 
-        if fish_direction.vertical_speed > 0.0 {
-            fish_direction.vertical_speed += rng.gen_range(-0.5..1.0);
-            if fish_direction.vertical_speed < 0.0 {
-                fish_direction.vertical_speed = 0.0;
+        if fish_direction.speed.y > 0.0 {
+            fish_direction.speed.y += rng.gen_range(-0.5..1.0);
+            if fish_direction.speed.y < 0.0 {
+                fish_direction.speed.y = 0.0;
             }
-        } else if fish_direction.vertical_speed < 0.0 {
-            fish_direction.vertical_speed -= rng.gen_range(-0.5..1.0);
-            if fish_direction.vertical_speed > 0.0 {
-                fish_direction.vertical_speed = 0.0;
+        } else if fish_direction.speed.y < 0.0 {
+            fish_direction.speed.y -= rng.gen_range(-0.5..1.0);
+            if fish_direction.speed.y > 0.0 {
+                fish_direction.speed.y = 0.0;
             }
         } else {
-            fish_direction.vertical_speed += rng.gen_range(-0.5..0.5);
+            fish_direction.speed.y += rng.gen_range(-0.5..0.5);
         }
     }
 }
@@ -188,30 +186,30 @@ fn move_fish(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
             "move_fish 🐟{}({}) h{} v{}",
             fish.name,
             fish_transform.translation,
-            fish_direction.horizontal_speed,
-            fish_direction.vertical_speed
+            fish_direction.speed.x,
+            fish_direction.speed.y
         );
-        fish_transform.translation.x += fish_direction.horizontal_speed;
-        fish_transform.translation.y += fish_direction.vertical_speed;
+        fish_transform.translation.x += fish_direction.speed.x;
+        fish_transform.translation.y += fish_direction.speed.y;
 
         if fish_transform.translation.x > WINDOW_RIGHT_X as f32 {
             fish_transform.translation.x = WINDOW_RIGHT_X as f32;
-            fish_direction.horizontal_speed *= -0.9;
+            fish_direction.speed.x *= -0.9;
         } else if fish_transform.translation.x < WINDOW_LEFT_X as f32 {
             fish_transform.translation.x = WINDOW_LEFT_X as f32;
-            fish_direction.horizontal_speed *= -0.9;
+            fish_direction.speed.x *= -0.9;
         } else {
-            fish_direction.horizontal_speed *= 0.9;
+            fish_direction.speed.x *= 0.9;
         }
 
         if fish_transform.translation.y > WINDOW_TOP_Y as f32 {
             fish_transform.translation.y = WINDOW_TOP_Y as f32;
-            fish_direction.vertical_speed *= -0.9;
+            fish_direction.speed.y *= -0.9;
         } else if fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32 {
             fish_transform.translation.y = WINDOW_BOTTOM_Y_SEAFLOOR as f32;
-            fish_direction.vertical_speed *= -0.9;
+            fish_direction.speed.y *= -0.9;
         } else {
-            fish_direction.vertical_speed *= 0.9;
+            fish_direction.speed.y *= 0.9;
         }
     }
 }
