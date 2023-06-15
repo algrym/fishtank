@@ -10,13 +10,15 @@ _(in no particular order)_
 * Make fish movement less jittery
   * Migrate to Rapier2D
     * Setup environment
+    * Fish and bubbles should notice collisions
     * Add bubble wobble
     * Setup fish as dynamic objects
   * Address acceleration and drag
   * https://lib.rs/crates/bevy_easings
 * Fish should move toward a destination
 * Fish should look toward their destination
-* Fish should notice collisions
-* Maybe bubbles should be particle systems?
+* Differentiate debug vs release builds
+  * Stop logging to STDOUT/STDERR
+  * Don't load debug plugins
 * Improve the CI pipeline
   * https://github.com/bevyengine/bevy_github_ci_template
