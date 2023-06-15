@@ -9,7 +9,7 @@ use bevy::{
     window::WindowResolution,
 };
 use bevy_asset_loader::prelude::*;
-// use bevy_inspector_egui::quick::WorldInspectorPlugin;
+//use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 
@@ -76,12 +76,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -249,7 +249,7 @@ fn bubble_move(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, 
         bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
         bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
 
-        // ... until it reaches the surface and despawns.
+        // ... until it reaches the surface and de-spawns.
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
             commands.entity(bubble_entity).despawn();
         }
@@ -281,6 +281,8 @@ fn animate_sprite(
     }
 }
 
+const PIXELS_PER_METER: f32 = 100.0;
+
 fn main() {
     App::new()
         .insert_resource(ClearColor(Color::MIDNIGHT_BLUE)) // background color
@@ -311,9 +313,11 @@ fn main() {
         .add_plugin(SystemInformationDiagnosticsPlugin::default())
         .add_plugin(LogDiagnosticsPlugin::default())
         .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        // Load physics plugin
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(100.0))
+        // Load physics plugins
         .add_plugin(RapierDebugRenderPlugin::default())
+        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(
+            PIXELS_PER_METER,
+        ))
         .insert_resource(RapierConfiguration {
             gravity: Vect::NEG_Y,
             ..Default::default()
@@ -322,7 +326,8 @@ fn main() {
         .add_system(animate_sprite)
         .add_system(fish_move)
         .add_system(fish_logic)
-        .add_system( // Bubbles only get spawned on a time
+        .add_system(
+            // Bubbles only get spawned one at a time
             spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
