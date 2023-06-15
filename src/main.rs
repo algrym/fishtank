@@ -30,8 +30,8 @@ const PIXELS_PER_METER: f32 = 100.0;
 
 const BUBBLE_RADIUS: f32 = 15.0;
 const BUBBLE_RESTITUTION_COEF: f32 = 0.7;
-const BUBBLE_GRAVITY: f32 = -75.0;
-// bubbles rise plus buoyancy
+const BUBBLE_RISE_SPEED: f32 = 1.0;
+const BUBBLE_GRAVITY: f32 = -75.0; // bubbles rise plus buoyancy
 const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
 
 // Names for all the fish sprite offsets in the texture atlas
@@ -255,6 +255,19 @@ fn spawn_bubble(
             TimerMode::Repeating,
         )))
         .insert(MobileBubble {});
+}
+
+fn _bubble_move(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+    for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
+        // Move each bubble upwards ...
+        bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
+        bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
+
+        // ... until it reaches the surface and despawns.
+        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
+            commands.entity(bubble_entity).despawn();
+        }
+    }
 }
 
 fn animate_sprite(

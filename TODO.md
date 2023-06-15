@@ -8,6 +8,10 @@ _(in no particular order)_
   * Same colors means same behavior
   * Schooling like [Boids](https://en.wikipedia.org/wiki/Boids)
 * Make fish movement less jittery
+  * Migrate to Rapier2D
+    * Setup environment
+    * Add bubble wobble
+    * Setup fish as dynamic objects
   * Address acceleration and drag
   * https://lib.rs/crates/bevy_easings
 * Fish should move toward a destination
