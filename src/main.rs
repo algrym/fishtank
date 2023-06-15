@@ -13,8 +13,6 @@ use bevy_asset_loader::prelude::*;
 use bevy_rapier2d::prelude::*;
 use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 
-const BUBBLE_SPAWNS_IN_SECS: u64 = 2;
-
 const WINDOW_WIDTH: i32 = 1024;
 const WINDOW_HEIGHT: i32 = 768;
 
@@ -28,7 +26,13 @@ const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
 const MIN_NUMBER_FISH: usize = 5;
 const MAX_NUMBER_FISH: usize = 20;
 
-const BUBBLE_RISE_SPEED: f32 = 1.0;
+const PIXELS_PER_METER: f32 = 100.0;
+
+const BUBBLE_RADIUS: f32 = 15.0;
+const BUBBLE_RESTITUTION_COEF: f32 = 0.7;
+const BUBBLE_GRAVITY: f32 = -75.0;
+// bubbles rise plus buoyancy
+const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
 
 // Names for all the fish sprite offsets in the texture atlas
 const FISH_OFFSET_GREEN: usize = 69;
@@ -76,12 +80,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-        tile_size_x = 63.0,
-        tile_size_y = 63.0,
-        columns = 17,
-        rows = 7,
-        padding_x = 1.0,
-        padding_y = 1.0
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -227,33 +231,30 @@ fn spawn_bubble(
     info!("🫧🐟{} #{}", fish_transform.translation, query.iter().len());
 
     // Spawn a bubble
-    commands.spawn((
-        MobileBubble {},
-        SpriteSheetBundle {
+    commands.spawn(RigidBody::Dynamic)
+        .insert(Sleeping::disabled())
+        .insert(GravityScale(BUBBLE_GRAVITY))
+        .insert(Ccd::enabled())
+        .insert(Collider::ball(BUBBLE_RADIUS))
+        .insert(fish_transform.clone())
+        .insert(ActiveEvents::COLLISION_EVENTS)
+        .insert(Restitution::coefficient(BUBBLE_RESTITUTION_COEF))
+        .insert(Velocity {
+            linvel: Vec2::new(0.0, 2.0),
+            angvel: 0.0,
+        })
+        .insert(SpriteSheetBundle {
             transform: *fish_transform,
             texture_atlas: texture_atlas_handle.sprite.clone(),
             sprite: TextureAtlasSprite::new(animation_indices.first),
             ..Default::default()
-        },
-        animation_indices,
-        AnimationTimer(Timer::from_seconds(
+        })
+        .insert(animation_indices)
+        .insert(AnimationTimer(Timer::from_seconds(
             rng.gen_range(1.0..3.0),
             TimerMode::Repeating,
-        )),
-    ));
-}
-
-fn bubble_move(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
-    for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
-        // Move each bubble upwards ...
-        bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
-        bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
-
-        // ... until it reaches the surface and de-spawns.
-        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
-            commands.entity(bubble_entity).despawn();
-        }
-    }
+        )))
+        .insert(MobileBubble {});
 }
 
 fn animate_sprite(
@@ -280,8 +281,6 @@ fn animate_sprite(
         }
     }
 }
-
-const PIXELS_PER_METER: f32 = 100.0;
 
 fn main() {
     App::new()
@@ -327,11 +326,10 @@ fn main() {
         .add_system(fish_move)
         .add_system(fish_logic)
         .add_system(
-            // Bubbles only get spawned one at a time
+            // Bubbles only get spawned on a scheduled timer
             spawn_bubble
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
         )
-        .add_system(bubble_move)
         .run();
 }
