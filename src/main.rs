@@ -9,7 +9,7 @@ use bevy::{
     window::WindowResolution,
 };
 use bevy_asset_loader::prelude::*;
-//use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
 
@@ -29,7 +29,7 @@ const MAX_NUMBER_FISH: usize = 20;
 const PIXELS_PER_METER: f32 = 100.0;
 
 const BUBBLE_RADIUS: f32 = 15.0;
-const BUBBLE_RESTITUTION_COEF: f32 = 0.7;
+const BUBBLE_RESTITUTION: f32 = 0.7;
 const BUBBLE_GRAVITY: f32 = -50.0;
 // bubbles rise plus buoyancy
 const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
@@ -81,12 +81,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -232,14 +232,16 @@ fn spawn_bubble(
     info!("🫧🐟{} #{}", fish_transform.translation, query.iter().len());
 
     // Spawn a bubble
-    commands.spawn(RigidBody::Dynamic)
+    commands
+        .spawn(RigidBody::Dynamic)
+        .insert(Name::new("Bubble"))
         .insert(Sleeping::disabled())
         .insert(GravityScale(BUBBLE_GRAVITY))
         .insert(Ccd::enabled())
         .insert(Collider::ball(BUBBLE_RADIUS))
-        .insert(fish_transform.clone())
+        .insert(*fish_transform)
         .insert(ActiveEvents::COLLISION_EVENTS)
-        .insert(Restitution::coefficient(BUBBLE_RESTITUTION_COEF))
+        .insert(Restitution::coefficient(BUBBLE_RESTITUTION))
         .insert(ColliderMassProperties::Density(BUBBLE_DENSITY))
         .insert(ExternalForce {
             force: Vec2::new(0.0, 1.0),
@@ -263,7 +265,10 @@ fn spawn_bubble(
         .insert(MobileBubble {});
 }
 
-fn bubble_reaper(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+fn bubble_reaper(
+    mut commands: Commands,
+    mut query: Query<(Entity, &MobileBubble, &mut Transform)>,
+) {
     for (bubble_entity, _bubble, bubble_transform) in query.iter_mut() {
         // despawn bubbles when they get just past the edge of the screen
         if bubble_transform.translation.y > WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) {
@@ -344,7 +349,7 @@ fn main() {
             gravity: Vect::NEG_Y,
             ..Default::default()
         })
-        // .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(WorldInspectorPlugin::new())
         .add_system(animate_sprite)
         .add_system(fish_move)
         .add_system(fish_logic)
