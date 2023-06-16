@@ -30,9 +30,10 @@ const PIXELS_PER_METER: f32 = 100.0;
 
 const BUBBLE_RADIUS: f32 = 15.0;
 const BUBBLE_RESTITUTION_COEF: f32 = 0.7;
-const BUBBLE_RISE_SPEED: f32 = 1.0;
-const BUBBLE_GRAVITY: f32 = -75.0; // bubbles rise plus buoyancy
+const BUBBLE_GRAVITY: f32 = -50.0;
+// bubbles rise plus buoyancy
 const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
+const BUBBLE_DENSITY: f32 = 0.1;
 
 // Names for all the fish sprite offsets in the texture atlas
 const FISH_OFFSET_GREEN: usize = 69;
@@ -239,6 +240,11 @@ fn spawn_bubble(
         .insert(fish_transform.clone())
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(Restitution::coefficient(BUBBLE_RESTITUTION_COEF))
+        .insert(ColliderMassProperties::Density(BUBBLE_DENSITY))
+        .insert(ExternalForce {
+            force: Vec2::new(0.0, 1.0),
+            torque: 0.0,
+        })
         .insert(Velocity {
             linvel: Vec2::new(0.0, 2.0),
             angvel: 0.0,
@@ -257,16 +263,20 @@ fn spawn_bubble(
         .insert(MobileBubble {});
 }
 
-fn _bubble_move(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
-    for (bubble_entity, _bubble, mut bubble_transform) in query.iter_mut() {
-        // Move each bubble upwards ...
-        bubble_transform.translation.x += thread_rng().gen_range(-2.0..2.0);
-        bubble_transform.translation.y += BUBBLE_RISE_SPEED + thread_rng().gen_range(-1.0..1.0);
-
-        // ... until it reaches the surface and despawns.
-        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 {
+fn bubble_reaper(mut commands: Commands, mut query: Query<(Entity, &MobileBubble, &mut Transform)>) {
+    for (bubble_entity, _bubble, bubble_transform) in query.iter_mut() {
+        // despawn bubbles when they get just past the edge of the screen
+        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) {
             commands.entity(bubble_entity).despawn();
         }
+    }
+}
+
+// apply a random "nudge" to the bubbles
+fn bubble_forces(mut query: Query<&mut ExternalForce>) {
+    for mut nudge in query.iter_mut() {
+        nudge.force = Vec2::new(thread_rng().gen_range(-5.0..5.0), 0.0);
+        nudge.torque = 0.0;
     }
 }
 
@@ -344,5 +354,7 @@ fn main() {
                 .in_schedule(CoreSchedule::FixedUpdate)
                 .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
         )
+        .add_system(bubble_reaper)
+        .add_system(bubble_forces)
         .run();
 }
