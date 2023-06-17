@@ -11,29 +11,36 @@ use bevy::{
 use bevy_asset_loader::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
-use rand::{seq::IteratorRandom, seq::SliceRandom, thread_rng, Rng};
+use rand::{seq::IteratorRandom, thread_rng, Rng};
+use std::ops::Index;
 
 const WINDOW_WIDTH: i32 = 1024;
 const WINDOW_HEIGHT: i32 = 768;
 
 // Remember, in Bevy's coordinate system the origin is at the center of the screen
 const WINDOW_BOTTOM_Y: i32 = WINDOW_HEIGHT / -2;
-const WINDOW_BOTTOM_Y_SEAFLOOR: i32 = (WINDOW_BOTTOM_Y as f32 * 0.6) as i32;
+const WINDOW_BOTTOM_Y_SEAFLOOR: i32 = (WINDOW_BOTTOM_Y as f32 * 0.7) as i32;
 const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
+const STANDARD_Z: f32 = 1.0;
 
 const MIN_NUMBER_FISH: usize = 5;
 const MAX_NUMBER_FISH: usize = 20;
 
 const PIXELS_PER_METER: f32 = 100.0;
+const WALL_THICKNESS: f32 = 5.0;
 
 const BUBBLE_RADIUS: f32 = 15.0;
 const BUBBLE_RESTITUTION: f32 = 0.7;
-const BUBBLE_GRAVITY: f32 = -50.0;
-// bubbles rise plus buoyancy
-const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
+const BUBBLE_GRAVITY: f32 = 0.1;
 const BUBBLE_DENSITY: f32 = 0.1;
+const BUBBLE_SPAWNS_IN_SECS: u64 = 1;
+
+const FISH_RADIUS: f32 = 32.0;
+const FISH_RESTITUTION: f32 = 0.3;
+const FISH_MASS: f32 = 5.0;
+const FISH_GRAVITY: f32 = 1.5;
 
 // Names for all the fish sprite offsets in the texture atlas
 const FISH_OFFSET_GREEN: usize = 69;
@@ -64,11 +71,6 @@ struct MobileFish {
 struct MobileBubble {}
 
 #[derive(Component)]
-struct Direction {
-    speed: Vec2,
-}
-
-#[derive(Component)]
 struct AnimationIndices {
     first: usize,
     last: usize,
@@ -81,12 +83,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-        tile_size_x = 63.0,
-        tile_size_y = 63.0,
-        columns = 17,
-        rows = 7,
-        padding_x = 1.0,
-        padding_y = 1.0
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -100,30 +102,44 @@ fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>
     let mut rng = thread_rng();
     for i in 0..rng.gen_range(MIN_NUMBER_FISH..MAX_NUMBER_FISH) {
         info!("spawn_fish {}", i);
-        commands.spawn((
-            MobileFish {
-                name: i.to_string(),
-            },
-            Direction {
-                speed: Vec2::new(rng.gen_range(-5.0..5.0), rng.gen_range(-5.0..5.0)),
-            },
-            SpriteSheetBundle {
+        commands
+            .spawn(RigidBody::Dynamic)
+            .insert(Name::new(format!("Fish {}", i)))
+            .insert(Sleeping::disabled())
+            .insert(GravityScale(FISH_GRAVITY))
+            .insert(Ccd::enabled())
+            .insert(Collider::ball(FISH_RADIUS))
+            .insert(ActiveEvents::COLLISION_EVENTS)
+            .insert(Restitution::coefficient(FISH_RESTITUTION))
+            .insert(ColliderMassProperties::Mass(FISH_MASS))
+            .insert(ExternalForce {
+                force: Vec2::new(rng.gen_range(-10.0..10.0), rng.gen_range(-5.0..5.0)),
+                torque: 0.0,
+            })
+            .insert(Velocity {
+                linvel: Vec2::new(rng.gen_range(-10.0..10.0), rng.gen_range(-5.0..5.0)),
+                angvel: 0.0,
+            })
+            .insert(MobileFish {
+                name: format!("Fish {}", i),
+            })
+            .insert(SpriteSheetBundle {
                 transform: Transform {
                     translation: Vec3::new(
                         rng.gen_range(WINDOW_LEFT_X..WINDOW_RIGHT_X) as f32,
                         rng.gen_range(WINDOW_BOTTOM_Y_SEAFLOOR..WINDOW_TOP_Y) as f32,
-                        0.1,
+                        STANDARD_Z,
                     ),
                     ..Default::default()
                 },
                 texture_atlas: texture_atlas_handle.sprite.clone(),
                 sprite: TextureAtlasSprite {
-                    index: *FISH_OFFSETS.choose(&mut rng).unwrap(),
+                    // index: *FISH_OFFSETS.choose(rng).unwrap(),
+                    index: *FISH_OFFSETS.index(i % FISH_OFFSETS.len()),
                     ..default()
                 },
                 ..Default::default()
-            },
-        ));
+            });
     }
 }
 
@@ -133,87 +149,64 @@ fn setup_camera(mut commands: Commands) {
 
 fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(SpriteBundle {
-        // Background
         texture: asset_server.load("fishBackground.png"),
-        transform: Transform::from_scale(Vec3::new(1.0, 1.0, -1.0)),
         ..Default::default()
-    });
+    })
+        .insert(Name::new("Background"));
+
+    commands
+        .spawn(RigidBody::Fixed)
+        .insert(Name::new("Sea Floor"))
+        .insert(Sleeping::disabled())
+        .insert(Ccd::enabled())
+        .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
+        .insert(TransformBundle::from(Transform::from_xyz(
+            0.0, WINDOW_BOTTOM_Y_SEAFLOOR as f32, STANDARD_Z,
+        )));
+
+    commands
+        .spawn(RigidBody::Fixed)
+        .insert(Name::new("Ocean Surface"))
+        .insert(Sleeping::disabled())
+        .insert(Ccd::enabled())
+        .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
+        .insert(TransformBundle::from(Transform::from_xyz(
+            0.0, WINDOW_TOP_Y as f32 + WALL_THICKNESS, STANDARD_Z,
+        )));
+
+    commands
+        .spawn(RigidBody::Fixed)
+        .insert(Name::new("Left Wall"))
+        .insert(Sleeping::disabled())
+        .insert(Ccd::enabled())
+        .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
+        .insert(TransformBundle::from(Transform::from_xyz(
+            WINDOW_LEFT_X as f32 - WALL_THICKNESS, 0.0, STANDARD_Z,
+        )));
+
+    commands
+        .spawn(RigidBody::Fixed)
+        .insert(Name::new("Right Wall"))
+        .insert(Sleeping::disabled())
+        .insert(Ccd::enabled())
+        .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
+        .insert(TransformBundle::from(Transform::from_xyz(
+            WINDOW_RIGHT_X as f32 + WALL_THICKNESS, 0.0, STANDARD_Z,
+        )));
 }
 
-fn fish_logic(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
-    let mut rng = thread_rng();
-
-    for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
-        debug!(
-            "update_fish 🐟{}@({}) scale{} speed{}",
-            fish.name, fish_transform.translation, fish_transform.scale, fish_direction.speed
-        );
-
-        // If the fish is starting to move off the edge of the screen,
-        // change direction and make the fish face the opposite
-        // left/right direction.
-        // The fish should be more likely to keep facing in the same direction.
-        if fish_direction.speed.x > 0.0 {
-            fish_transform.scale = Vec3::new(1.0, 1.0, 1.0);
-            fish_direction.speed.x += rng.gen_range(-1.0..1.5);
-            if fish_direction.speed.x < 0.0 {
-                fish_direction.speed.x = 0.0;
-            }
-        } else if fish_direction.speed.x < 0.0 {
-            fish_transform.scale = Vec3::new(-1.0, 1.0, 1.0);
-            fish_direction.speed.x -= rng.gen_range(-1.0..1.5);
-            if fish_direction.speed.x > 0.0 {
-                fish_direction.speed.x = 0.0;
-            }
-        } else {
-            fish_direction.speed.x += rng.gen_range(-0.5..0.5);
-        }
-
-        if fish_direction.speed.y > 0.0 {
-            fish_direction.speed.y += rng.gen_range(-0.5..1.0);
-            if fish_direction.speed.y < 0.0 {
-                fish_direction.speed.y = 0.0;
-            }
-        } else if fish_direction.speed.y < 0.0 {
-            fish_direction.speed.y -= rng.gen_range(-0.5..1.0);
-            if fish_direction.speed.y > 0.0 {
-                fish_direction.speed.y = 0.0;
-            }
-        } else {
-            fish_direction.speed.y += rng.gen_range(-0.5..0.5);
-        }
+// TODO: add fish logic
+fn _fish_logic(mut query: Query<(&MobileFish, &mut Velocity)>) {
+    for (fish, fish_velocity) in query.iter_mut() {
+        debug!("update_fish 🐟{} v{:?}", fish.name, fish_velocity);
     }
 }
 
-fn fish_move(mut query: Query<(&MobileFish, &mut Direction, &mut Transform)>) {
-    for (fish, mut fish_direction, mut fish_transform) in query.iter_mut() {
-        debug!(
-            "move_fish 🐟{}({}) speed{}",
-            fish.name, fish_transform.translation, fish_direction.speed,
-        );
-        fish_transform.translation.x += fish_direction.speed.x;
-        fish_transform.translation.y += fish_direction.speed.y;
-
-        // Constrain the fish to stay inside the window
-        if fish_transform.translation.x > WINDOW_RIGHT_X as f32 {
-            fish_transform.translation.x = WINDOW_RIGHT_X as f32;
-            fish_direction.speed.x *= -0.9;
-        } else if fish_transform.translation.x < WINDOW_LEFT_X as f32 {
-            fish_transform.translation.x = WINDOW_LEFT_X as f32;
-            fish_direction.speed.x *= -0.9;
-        } else {
-            fish_direction.speed.x *= 0.9;
-        }
-
-        if fish_transform.translation.y > WINDOW_TOP_Y as f32 {
-            fish_transform.translation.y = WINDOW_TOP_Y as f32;
-            fish_direction.speed.y *= -0.9;
-        } else if fish_transform.translation.y < WINDOW_BOTTOM_Y_SEAFLOOR as f32 {
-            fish_transform.translation.y = WINDOW_BOTTOM_Y_SEAFLOOR as f32;
-            fish_direction.speed.y *= -0.9;
-        } else {
-            fish_direction.speed.y *= 0.9;
-        }
+// TODO: add fish forces
+fn _fish_forces(mut query: Query<&mut ExternalForce, With<MobileFish>>) {
+    info!("fish_forces {:?}", query);
+    for mut nudge in query.iter_mut() {
+        info!("fish_forces nudge {:?}", nudge);
     }
 }
 
@@ -228,7 +221,7 @@ fn spawn_bubble(
         last: DECOR_OFFSET_BUBBLE_BIG_OPEN,
     };
     // Pick a random fish
-    let Some((fish_transform, _fish)) = query.iter().choose(&mut rng) else { return; };
+    let Some((fish_transform, _)) = query.iter().choose(&mut rng) else { return; };
     info!("🫧🐟{} #{}", fish_transform.translation, query.iter().len());
 
     // Spawn a bubble
@@ -278,9 +271,11 @@ fn bubble_reaper(
 }
 
 // apply a random "nudge" to the bubbles
-fn bubble_forces(mut query: Query<&mut ExternalForce>) {
+fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
+    info!("bubble_forces {:?}", query);
     for mut nudge in query.iter_mut() {
-        nudge.force = Vec2::new(thread_rng().gen_range(-5.0..5.0), 0.0);
+        info!("bubble_forces nudge {:?}", nudge);
+        nudge.force = Vec2::new(thread_rng().gen_range(-5.0..5.0), 1.0);
         nudge.torque = 0.0;
     }
 }
@@ -346,13 +341,10 @@ fn main() {
             PIXELS_PER_METER,
         ))
         .insert_resource(RapierConfiguration {
-            gravity: Vect::NEG_Y,
+            gravity: Vect::ZERO,
             ..Default::default()
         })
         .add_plugin(WorldInspectorPlugin::new())
-        .add_system(animate_sprite)
-        .add_system(fish_move)
-        .add_system(fish_logic)
         .add_system(
             // Bubbles only get spawned on a scheduled timer
             spawn_bubble
@@ -361,5 +353,6 @@ fn main() {
         )
         .add_system(bubble_reaper)
         .add_system(bubble_forces)
+        .add_system(animate_sprite)
         .run();
 }
