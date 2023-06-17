@@ -64,7 +64,7 @@ const FISH_OFFSETS: [usize; 6] = [
 
 #[derive(Component)]
 struct MobileFish {
-    name: String,
+    _name: String,
 }
 
 #[derive(Component)]
@@ -83,12 +83,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -121,7 +121,7 @@ fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>
                 angvel: 0.0,
             })
             .insert(MobileFish {
-                name: format!("Fish {}", i),
+                _name: format!("Fish {}", i),
             })
             .insert(SpriteSheetBundle {
                 transform: Transform {
@@ -148,10 +148,11 @@ fn setup_camera(mut commands: Commands) {
 }
 
 fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(SpriteBundle {
-        texture: asset_server.load("fishBackground.png"),
-        ..Default::default()
-    })
+    commands
+        .spawn(SpriteBundle {
+            texture: asset_server.load("fishBackground.png"),
+            ..Default::default()
+        })
         .insert(Name::new("Background"));
 
     commands
@@ -161,7 +162,9 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
         .insert(TransformBundle::from(Transform::from_xyz(
-            0.0, WINDOW_BOTTOM_Y_SEAFLOOR as f32, STANDARD_Z,
+            0.0,
+            WINDOW_BOTTOM_Y_SEAFLOOR as f32,
+            STANDARD_Z,
         )));
 
     commands
@@ -171,7 +174,9 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
         .insert(TransformBundle::from(Transform::from_xyz(
-            0.0, WINDOW_TOP_Y as f32 + WALL_THICKNESS, STANDARD_Z,
+            0.0,
+            WINDOW_TOP_Y as f32 + WALL_THICKNESS,
+            STANDARD_Z,
         )));
 
     commands
@@ -181,7 +186,9 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
         .insert(TransformBundle::from(Transform::from_xyz(
-            WINDOW_LEFT_X as f32 - WALL_THICKNESS, 0.0, STANDARD_Z,
+            WINDOW_LEFT_X as f32 - WALL_THICKNESS,
+            0.0,
+            STANDARD_Z,
         )));
 
     commands
@@ -191,21 +198,23 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
         .insert(TransformBundle::from(Transform::from_xyz(
-            WINDOW_RIGHT_X as f32 + WALL_THICKNESS, 0.0, STANDARD_Z,
+            WINDOW_RIGHT_X as f32 + WALL_THICKNESS,
+            0.0,
+            STANDARD_Z,
         )));
 }
 
 // TODO: add fish logic
 fn _fish_logic(mut query: Query<(&MobileFish, &mut Velocity)>) {
     for (fish, fish_velocity) in query.iter_mut() {
-        debug!("update_fish 🐟{} v{:?}", fish.name, fish_velocity);
+        debug!("update_fish 🐟{} v{:?}", fish._name, fish_velocity);
     }
 }
 
 // TODO: add fish forces
 fn _fish_forces(mut query: Query<&mut ExternalForce, With<MobileFish>>) {
     info!("fish_forces {:?}", query);
-    for mut nudge in query.iter_mut() {
+    for nudge in query.iter_mut() {
         info!("fish_forces nudge {:?}", nudge);
     }
 }
@@ -272,9 +281,9 @@ fn bubble_reaper(
 
 // apply a random "nudge" to the bubbles
 fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
-    info!("bubble_forces {:?}", query);
+    debug!("bubble_forces {:?}", query);
     for mut nudge in query.iter_mut() {
-        info!("bubble_forces nudge {:?}", nudge);
+        debug!("bubble_forces nudge {:?}", nudge);
         nudge.force = Vec2::new(thread_rng().gen_range(-5.0..5.0), 1.0);
         nudge.torque = 0.0;
     }
