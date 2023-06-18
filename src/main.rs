@@ -91,12 +91,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-        tile_size_x = 63.0,
-        tile_size_y = 63.0,
-        columns = 17,
-        rows = 7,
-        padding_x = 1.0,
-        padding_y = 1.0
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -312,12 +312,14 @@ fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
 // TODO: Fish collisions with walls aren't working right
 fn fish_collisions(
     rapier_context: Res<RapierContext>,
-    mut query_fish: Query<(Entity, &mut Velocity), With<MobileFish>>,
+    mut query_fish: Query<(Entity, &mut Velocity, &mut ExternalForce), With<MobileFish>>,
     query_wall: Query<(Entity, &Wall)>,
 ) {
     for (entity_wall, wall) in query_wall.iter() {
-        for (entity_fish, mut fish_velocity) in query_fish.iter_mut() {
-            info!(
+        for (entity_fish,
+            mut fish_velocity,
+            mut fish_externalforce) in query_fish.iter_mut() {
+            debug!(
                 "fish_collision check wall:{:?} fish:{:?}",
                 entity_wall, entity_fish
             );
@@ -327,15 +329,19 @@ fn fish_collisions(
                 match wall {
                     Wall::Left => {
                         fish_velocity.linvel.x *= -1.0;
+                        fish_externalforce.force.x *= -1.0;
                     }
                     Wall::Right => {
                         fish_velocity.linvel.x *= -1.0;
+                        fish_externalforce.force.x *= -1.0;
                     }
                     Wall::Bottom => {
                         fish_velocity.linvel.y *= -1.0;
+                        fish_externalforce.force.y *= -1.0;
                     }
                     Wall::Top => {
                         fish_velocity.linvel.y *= -1.0;
+                        fish_externalforce.force.y *= -1.0;
                     }
                 }
             }
@@ -352,7 +358,7 @@ fn bubble_collisions(
 ) {
     for entity_wall in query_wall.iter() {
         for entity_bubble in query_bubble.iter() {
-            info!(
+            debug!(
                 "collision check wall:{:?} bubble:{:?}",
                 entity_wall, entity_bubble
             );
