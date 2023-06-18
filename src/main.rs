@@ -71,6 +71,14 @@ struct MobileFish {
 struct MobileBubble {}
 
 #[derive(Component)]
+enum Wall {
+    Top,
+    Left,
+    Right,
+    Bottom,
+}
+
+#[derive(Component)]
 struct AnimationIndices {
     first: usize,
     last: usize,
@@ -83,12 +91,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -160,6 +168,7 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(RigidBody::Fixed)
         .insert(Name::new("Sea Floor"))
+        .insert(Wall::Bottom)
         .insert(Sleeping::disabled())
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
@@ -172,6 +181,7 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(RigidBody::Fixed)
         .insert(Name::new("Ocean Surface"))
+        .insert(Wall::Top)
         .insert(Sleeping::disabled())
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
@@ -184,6 +194,7 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(RigidBody::Fixed)
         .insert(Name::new("Left Wall"))
+        .insert(Wall::Left)
         .insert(Sleeping::disabled())
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
@@ -196,6 +207,7 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands
         .spawn(RigidBody::Fixed)
         .insert(Name::new("Right Wall"))
+        .insert(Wall::Right)
         .insert(Sleeping::disabled())
         .insert(Ccd::enabled())
         .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
@@ -297,6 +309,65 @@ fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
     }
 }
 
+// TODO: Fish collisions with walls aren't working right
+fn fish_collisions(
+    rapier_context: Res<RapierContext>,
+    mut query_fish: Query<(Entity, &mut Velocity), With<MobileFish>>,
+    query_wall: Query<(Entity, &Wall)>,
+) {
+    for (entity_wall, wall) in query_wall.iter() {
+        for (entity_fish, mut fish_velocity) in query_fish.iter_mut() {
+            info!(
+                "fish_collision check wall:{:?} fish:{:?}",
+                entity_wall, entity_fish
+            );
+            /* Find the intersection pair, if it exists, between two colliders. */
+            if rapier_context.intersection_pair(entity_wall, entity_fish) == Some(true) {
+                info!("COLLISION wall:{:?} fish:{:?}", entity_wall, entity_fish);
+                match wall {
+                    Wall::Left => {
+                        fish_velocity.linvel.x *= -1.0;
+                    }
+                    Wall::Right => {
+                        fish_velocity.linvel.x *= -1.0;
+                    }
+                    Wall::Bottom => {
+                        fish_velocity.linvel.y *= -1.0;
+                    }
+                    Wall::Top => {
+                        fish_velocity.linvel.y *= -1.0;
+                    }
+                }
+            }
+        }
+    }
+}
+
+// TODO: Bubble collisions with walls aren't working right
+fn bubble_collisions(
+    rapier_context: Res<RapierContext>,
+    query_bubble: Query<Entity, With<MobileBubble>>,
+    query_wall: Query<Entity, With<Wall>>,
+    mut commands: Commands,
+) {
+    for entity_wall in query_wall.iter() {
+        for entity_bubble in query_bubble.iter() {
+            info!(
+                "collision check wall:{:?} bubble:{:?}",
+                entity_wall, entity_bubble
+            );
+            /* Find the intersection pair, if it exists, between two colliders. */
+            if rapier_context.intersection_pair(entity_wall, entity_bubble) == Some(true) {
+                info!(
+                    "COLLISION wall:{:?} bubble:{:?}",
+                    entity_wall, entity_bubble
+                );
+                commands.entity(entity_bubble).despawn();
+            }
+        }
+    }
+}
+
 fn animate_sprite(
     time: Res<Time>,
     mut query: Query<(
@@ -370,7 +441,9 @@ fn main() {
         )
         .add_system(bubble_reaper)
         .add_system(bubble_forces)
+        .add_system(bubble_collisions)
         .add_system(fish_logic)
+        .add_system(fish_collisions)
         .add_system(animate_sprite)
         .run();
 }
