@@ -83,12 +83,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-        tile_size_x = 63.0,
-        tile_size_y = 63.0,
-        columns = 17,
-        rows = 7,
-        padding_x = 1.0,
-        padding_y = 1.0
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -112,12 +112,14 @@ fn spawn_fish(mut commands: Commands, texture_atlas_handle: Res<FishSpriteSheet>
             .insert(ActiveEvents::COLLISION_EVENTS)
             .insert(Restitution::coefficient(FISH_RESTITUTION))
             .insert(ColliderMassProperties::Mass(FISH_MASS))
+            .insert(Dominance::group(10))
+            .insert(LockedAxes::ROTATION_LOCKED)
             .insert(ExternalForce {
-                force: Vec2::new(rng.gen_range(-10.0..10.0), rng.gen_range(-5.0..5.0)),
+                force: Vec2::new(rng.gen_range(-50.0..50.0), rng.gen_range(-25.0..25.0)),
                 torque: 0.0,
             })
             .insert(Velocity {
-                linvel: Vec2::new(rng.gen_range(-10.0..10.0), rng.gen_range(-5.0..5.0)),
+                linvel: Vec2::new(rng.gen_range(-50.0..50.0), rng.gen_range(-25.0..25.0)),
                 angvel: 0.0,
             })
             .insert(MobileFish {
@@ -205,9 +207,14 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 // TODO: add fish logic
-fn _fish_logic(mut query: Query<(&MobileFish, &mut Velocity)>) {
-    for (fish, fish_velocity) in query.iter_mut() {
+fn fish_logic(mut query: Query<(&MobileFish, &mut Velocity, &mut Transform)>) {
+    for (fish, fish_velocity, mut fish_transform) in query.iter_mut() {
         debug!("update_fish 🐟{} v{:?}", fish._name, fish_velocity);
+        if fish_velocity.linvel.x > 0.0 {
+            fish_transform.scale = Vec3::new(1.0, 1.0, 1.0);
+        } else if fish_velocity.linvel.x < 0.0 {
+            fish_transform.scale = Vec3::new(-1.0, 1.0, 1.0);
+        }
     }
 }
 
@@ -245,6 +252,7 @@ fn spawn_bubble(
         .insert(ActiveEvents::COLLISION_EVENTS)
         .insert(Restitution::coefficient(BUBBLE_RESTITUTION))
         .insert(ColliderMassProperties::Density(BUBBLE_DENSITY))
+        .insert(Dominance::group(0))
         .insert(ExternalForce {
             force: Vec2::new(0.0, 1.0),
             torque: 0.0,
@@ -362,6 +370,7 @@ fn main() {
         )
         .add_system(bubble_reaper)
         .add_system(bubble_forces)
+        .add_system(fish_logic)
         .add_system(animate_sprite)
         .run();
 }
