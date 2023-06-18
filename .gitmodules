@@ -1,0 +1,3 @@
+[submodule "bevy_github_ci_template"]
+	path = bevy_github_ci_template
+	url = git@github.com:bevyengine/bevy_github_ci_template.git
