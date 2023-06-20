@@ -19,6 +19,5 @@ Thanks to [Kenney.nl](https://kenney.nl/) for the fish art.
 
 <sub>We don't need no stinking _badges._ :badger:<sub>
 
-![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
-![Dependabot](https://img.shields.io/badge/dependabot-025E8C?style=for-the-badge&logo=dependabot&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/github%20actions-%232671E5.svg?style=for-the-badge&logo=githubactions&logoColor=white)
+[![CI](https://github.com/algrym/fishtank/actions/workflows/ci.yaml/badge.svg)](https://github.com/algrym/fishtank/actions/workflows/ci.yaml)
+[![Release](https://github.com/algrym/fishtank/actions/workflows/release.yaml/badge.svg)](https://github.com/algrym/fishtank/actions/workflows/release.yaml)
