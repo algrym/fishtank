@@ -91,12 +91,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -316,9 +316,7 @@ fn fish_collisions(
     query_wall: Query<(Entity, &Wall)>,
 ) {
     for (entity_wall, wall) in query_wall.iter() {
-        for (entity_fish,
-            mut fish_velocity,
-            mut fish_externalforce) in query_fish.iter_mut() {
+        for (entity_fish, mut fish_velocity, mut fish_externalforce) in query_fish.iter_mut() {
             debug!(
                 "fish_collision check wall:{:?} fish:{:?}",
                 entity_wall, entity_fish
