@@ -29,7 +29,6 @@ const MIN_NUMBER_FISH: usize = 5;
 const MAX_NUMBER_FISH: usize = 20;
 
 const PIXELS_PER_METER: f32 = 100.0;
-const WALL_THICKNESS: f32 = 5.0;
 
 const BUBBLE_RADIUS: f32 = 15.0;
 const BUBBLE_RESTITUTION: f32 = 0.7;
@@ -71,14 +70,6 @@ struct MobileFish {
 struct MobileBubble {}
 
 #[derive(Component)]
-enum Wall {
-    Top,
-    Left,
-    Right,
-    Bottom,
-}
-
-#[derive(Component)]
 struct AnimationIndices {
     first: usize,
     last: usize,
@@ -91,12 +82,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-        tile_size_x = 63.0,
-        tile_size_y = 63.0,
-        columns = 17,
-        rows = 7,
-        padding_x = 1.0,
-        padding_y = 1.0
+    tile_size_x = 63.0,
+    tile_size_y = 63.0,
+    columns = 17,
+    rows = 7,
+    padding_x = 1.0,
+    padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -165,57 +156,6 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
         })
         .insert(Name::new("Background"));
 
-    commands
-        .spawn(RigidBody::Fixed)
-        .insert(Name::new("Sea Floor"))
-        .insert(Wall::Bottom)
-        .insert(Sleeping::disabled())
-        .insert(Ccd::enabled())
-        .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
-        .insert(TransformBundle::from(Transform::from_xyz(
-            0.0,
-            WINDOW_BOTTOM_Y_SEAFLOOR as f32,
-            STANDARD_Z,
-        )));
-
-    commands
-        .spawn(RigidBody::Fixed)
-        .insert(Name::new("Ocean Surface"))
-        .insert(Wall::Top)
-        .insert(Sleeping::disabled())
-        .insert(Ccd::enabled())
-        .insert(Collider::cuboid(WINDOW_WIDTH as f32, WALL_THICKNESS))
-        .insert(TransformBundle::from(Transform::from_xyz(
-            0.0,
-            WINDOW_TOP_Y as f32 + WALL_THICKNESS,
-            STANDARD_Z,
-        )));
-
-    commands
-        .spawn(RigidBody::Fixed)
-        .insert(Name::new("Left Wall"))
-        .insert(Wall::Left)
-        .insert(Sleeping::disabled())
-        .insert(Ccd::enabled())
-        .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
-        .insert(TransformBundle::from(Transform::from_xyz(
-            WINDOW_LEFT_X as f32 - WALL_THICKNESS,
-            0.0,
-            STANDARD_Z,
-        )));
-
-    commands
-        .spawn(RigidBody::Fixed)
-        .insert(Name::new("Right Wall"))
-        .insert(Wall::Right)
-        .insert(Sleeping::disabled())
-        .insert(Ccd::enabled())
-        .insert(Collider::cuboid(WALL_THICKNESS, WINDOW_HEIGHT as f32))
-        .insert(TransformBundle::from(Transform::from_xyz(
-            WINDOW_RIGHT_X as f32 + WALL_THICKNESS,
-            0.0,
-            STANDARD_Z,
-        )));
 }
 
 // TODO: add fish logic
@@ -293,7 +233,10 @@ fn bubble_reaper(
 ) {
     for (bubble_entity, _bubble, bubble_transform) in query.iter_mut() {
         // despawn bubbles when they get just past the edge of the screen
-        if bubble_transform.translation.y > WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) {
+        if bubble_transform.translation.x <= WINDOW_LEFT_X as f32 + (BUBBLE_RADIUS * 2.0) ||
+            bubble_transform.translation.y >= WINDOW_RIGHT_X as f32 + (BUBBLE_RADIUS * 2.0) ||
+            bubble_transform.translation.y >= WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) ||
+            bubble_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 + (BUBBLE_RADIUS * 2.0) {
             commands.entity(bubble_entity).despawn();
         }
     }
@@ -309,65 +252,20 @@ fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
     }
 }
 
-// TODO: Fish collisions with walls aren't working right
-fn fish_collisions(
-    rapier_context: Res<RapierContext>,
-    mut query_fish: Query<(Entity, &mut Velocity, &mut ExternalForce), With<MobileFish>>,
-    query_wall: Query<(Entity, &Wall)>,
+fn fish_constraints(
+    mut query_fish: Query<(&Transform, &mut Velocity, &mut ExternalForce), With<MobileFish>>,
 ) {
-    for (entity_wall, wall) in query_wall.iter() {
-        for (entity_fish, mut fish_velocity, mut fish_externalforce) in query_fish.iter_mut() {
-            debug!(
-                "fish_collision check wall:{:?} fish:{:?}",
-                entity_wall, entity_fish
-            );
-            /* Find the intersection pair, if it exists, between two colliders. */
-            if rapier_context.intersection_pair(entity_wall, entity_fish) == Some(true) {
-                info!("COLLISION wall:{:?} fish:{:?}", entity_wall, entity_fish);
-                match wall {
-                    Wall::Left => {
-                        fish_velocity.linvel.x *= -1.0;
-                        fish_externalforce.force.x *= -1.0;
-                    }
-                    Wall::Right => {
-                        fish_velocity.linvel.x *= -1.0;
-                        fish_externalforce.force.x *= -1.0;
-                    }
-                    Wall::Bottom => {
-                        fish_velocity.linvel.y *= -1.0;
-                        fish_externalforce.force.y *= -1.0;
-                    }
-                    Wall::Top => {
-                        fish_velocity.linvel.y *= -1.0;
-                        fish_externalforce.force.y *= -1.0;
-                    }
-                }
-            }
+    for (fish_transform, mut fish_velocity, mut fish_externalforce) in query_fish.iter_mut() {
+        if fish_transform.translation.x >= WINDOW_RIGHT_X as f32 + (FISH_RADIUS * 2.0) ||
+            fish_transform.translation.x <= WINDOW_LEFT_X as f32 + (FISH_RADIUS * 2.0) {
+            fish_velocity.linvel.x *= -1.1;
+            fish_externalforce.force.x *= -1.1;
         }
-    }
-}
 
-// TODO: Bubble collisions with walls aren't working right
-fn bubble_collisions(
-    rapier_context: Res<RapierContext>,
-    query_bubble: Query<Entity, With<MobileBubble>>,
-    query_wall: Query<Entity, With<Wall>>,
-    mut commands: Commands,
-) {
-    for entity_wall in query_wall.iter() {
-        for entity_bubble in query_bubble.iter() {
-            debug!(
-                "collision check wall:{:?} bubble:{:?}",
-                entity_wall, entity_bubble
-            );
-            /* Find the intersection pair, if it exists, between two colliders. */
-            if rapier_context.intersection_pair(entity_wall, entity_bubble) == Some(true) {
-                info!(
-                    "COLLISION wall:{:?} bubble:{:?}",
-                    entity_wall, entity_bubble
-                );
-                commands.entity(entity_bubble).despawn();
-            }
+        if fish_transform.translation.y >= WINDOW_TOP_Y as f32 + (FISH_RADIUS * 2.0) ||
+            fish_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 + (FISH_RADIUS * 2.0) {
+            fish_velocity.linvel.y *= -1.1;
+            fish_externalforce.force.y *= -1.1;
         }
     }
 }
@@ -445,9 +343,8 @@ fn main() {
         )
         .add_system(bubble_reaper)
         .add_system(bubble_forces)
-        .add_system(bubble_collisions)
         .add_system(fish_logic)
-        .add_system(fish_collisions)
+        .add_system(fish_constraints)
         .add_system(animate_sprite)
         .run();
 }
