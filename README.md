@@ -3,6 +3,8 @@ A fish tank in your ~~console~~ GUI, written in [Rust](https://www.rust-lang.org
 
 (It isn't really a console application anymore, but now it uses [Bevy](https://bevyengine.org/) ... which is _awesome._)
 
+![Alt text](assets/screenshot-2023-06-24.png?raw=true "Screenshot")
+
 ## To see the fishes:
 
 * First set up a [Rust build environment](https://www.rust-lang.org/learn/get-started).

@@ -19,7 +19,7 @@ const WINDOW_HEIGHT: i32 = 768;
 
 // Remember, in Bevy's coordinate system the origin is at the center of the screen
 const WINDOW_BOTTOM_Y: i32 = WINDOW_HEIGHT / -2;
-const WINDOW_BOTTOM_Y_SEAFLOOR: i32 = (WINDOW_BOTTOM_Y as f32 * 0.7) as i32;
+const WINDOW_BOTTOM_Y_SEAFLOOR: i32 = (WINDOW_BOTTOM_Y as f32 * 0.5) as i32;
 const WINDOW_LEFT_X: i32 = WINDOW_WIDTH / -2;
 const WINDOW_TOP_Y: i32 = WINDOW_HEIGHT / 2;
 const WINDOW_RIGHT_X: i32 = WINDOW_WIDTH / 2;
@@ -233,10 +233,10 @@ fn bubble_reaper(
 ) {
     for (bubble_entity, _bubble, bubble_transform) in query.iter_mut() {
         // despawn bubbles when they get just past the edge of the screen
-        if bubble_transform.translation.x <= WINDOW_LEFT_X as f32 + (BUBBLE_RADIUS * 2.0) ||
+        if bubble_transform.translation.x <= WINDOW_LEFT_X as f32 - (BUBBLE_RADIUS * 2.0) ||
             bubble_transform.translation.y >= WINDOW_RIGHT_X as f32 + (BUBBLE_RADIUS * 2.0) ||
             bubble_transform.translation.y >= WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) ||
-            bubble_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 + (BUBBLE_RADIUS * 2.0) {
+            bubble_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (BUBBLE_RADIUS * 2.0) {
             commands.entity(bubble_entity).despawn();
         }
     }
@@ -255,17 +255,17 @@ fn bubble_forces(mut query: Query<&mut ExternalForce, With<MobileBubble>>) {
 fn fish_constraints(
     mut query_fish: Query<(&Transform, &mut Velocity, &mut ExternalForce), With<MobileFish>>,
 ) {
-    for (fish_transform, mut fish_velocity, mut fish_externalforce) in query_fish.iter_mut() {
+    for (fish_transform, mut fish_velocity, mut fish_external_force) in query_fish.iter_mut() {
         if fish_transform.translation.x >= WINDOW_RIGHT_X as f32 + (FISH_RADIUS * 2.0) ||
-            fish_transform.translation.x <= WINDOW_LEFT_X as f32 + (FISH_RADIUS * 2.0) {
-            fish_velocity.linvel.x *= -1.1;
-            fish_externalforce.force.x *= -1.1;
+            fish_transform.translation.x <= WINDOW_LEFT_X as f32 - (FISH_RADIUS * 2.0) {
+            fish_velocity.linvel.x *= -0.9;
+            fish_external_force.force.x *= -0.9;
         }
 
         if fish_transform.translation.y >= WINDOW_TOP_Y as f32 + (FISH_RADIUS * 2.0) ||
-            fish_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 + (FISH_RADIUS * 2.0) {
-            fish_velocity.linvel.y *= -1.1;
-            fish_externalforce.force.y *= -1.1;
+            fish_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (FISH_RADIUS * 2.0) {
+            fish_velocity.linvel.y *= -0.9;
+            fish_external_force.force.y *= -0.9;
         }
     }
 }
