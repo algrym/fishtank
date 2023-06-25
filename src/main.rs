@@ -1,7 +1,7 @@
 use bevy::{
-    diagnostic::{
-        FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
-    },
+    // diagnostic::{
+    //     FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
+    // },
     math::f32::Vec3,
     prelude::*,
     time::common_conditions::on_fixed_timer,
@@ -9,7 +9,7 @@ use bevy::{
     window::WindowResolution,
 };
 use bevy_asset_loader::prelude::*;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
+// use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_rapier2d::prelude::*;
 use rand::{seq::IteratorRandom, thread_rng, Rng};
 use std::ops::Index;
@@ -325,11 +325,11 @@ fn main() {
         .add_startup_systems((setup_camera, setup_background, spawn_fish))
         // Load diagnostic plugins
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
-        .add_plugin(SystemInformationDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        // .add_plugin(SystemInformationDiagnosticsPlugin::default())
+        // .add_plugin(LogDiagnosticsPlugin::default())
+        // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // Load physics plugins
-        .add_plugin(RapierDebugRenderPlugin::default())
+        // .add_plugin(RapierDebugRenderPlugin::default())
         .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(
             PIXELS_PER_METER,
         ))
@@ -337,7 +337,7 @@ fn main() {
             gravity: Vect::ZERO,
             ..Default::default()
         })
-        .add_plugin(WorldInspectorPlugin::new())
+        // .add_plugin(WorldInspectorPlugin::new())
         .add_system(
             // Bubbles only get spawned on a scheduled timer
             spawn_bubble
