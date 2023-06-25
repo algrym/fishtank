@@ -82,12 +82,12 @@ struct AnimationTimer(Timer);
 struct FishSpriteSheet {
     // sadly, the "derive" crashes if I use the const's.
     #[asset(texture_atlas(
-    tile_size_x = 63.0,
-    tile_size_y = 63.0,
-    columns = 17,
-    rows = 7,
-    padding_x = 1.0,
-    padding_y = 1.0
+        tile_size_x = 63.0,
+        tile_size_y = 63.0,
+        columns = 17,
+        rows = 7,
+        padding_x = 1.0,
+        padding_y = 1.0
     ))]
     #[asset(path = "fishTileSheet.png")]
     sprite: Handle<TextureAtlas>,
@@ -155,7 +155,6 @@ fn setup_background(mut commands: Commands, asset_server: Res<AssetServer>) {
             ..Default::default()
         })
         .insert(Name::new("Background"));
-
 }
 
 // TODO: add fish logic
@@ -233,10 +232,12 @@ fn bubble_reaper(
 ) {
     for (bubble_entity, _bubble, bubble_transform) in query.iter_mut() {
         // despawn bubbles when they get just past the edge of the screen
-        if bubble_transform.translation.x <= WINDOW_LEFT_X as f32 - (BUBBLE_RADIUS * 2.0) ||
-            bubble_transform.translation.y >= WINDOW_RIGHT_X as f32 + (BUBBLE_RADIUS * 2.0) ||
-            bubble_transform.translation.y >= WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0) ||
-            bubble_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (BUBBLE_RADIUS * 2.0) {
+        if bubble_transform.translation.x <= WINDOW_LEFT_X as f32 - (BUBBLE_RADIUS * 2.0)
+            || bubble_transform.translation.y >= WINDOW_RIGHT_X as f32 + (BUBBLE_RADIUS * 2.0)
+            || bubble_transform.translation.y >= WINDOW_TOP_Y as f32 + (BUBBLE_RADIUS * 2.0)
+            || bubble_transform.translation.y
+                <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (BUBBLE_RADIUS * 2.0)
+        {
             commands.entity(bubble_entity).despawn();
         }
     }
@@ -256,14 +257,16 @@ fn fish_constraints(
     mut query_fish: Query<(&Transform, &mut Velocity, &mut ExternalForce), With<MobileFish>>,
 ) {
     for (fish_transform, mut fish_velocity, mut fish_external_force) in query_fish.iter_mut() {
-        if fish_transform.translation.x >= WINDOW_RIGHT_X as f32 + (FISH_RADIUS * 2.0) ||
-            fish_transform.translation.x <= WINDOW_LEFT_X as f32 - (FISH_RADIUS * 2.0) {
+        if fish_transform.translation.x >= WINDOW_RIGHT_X as f32 + (FISH_RADIUS * 2.0)
+            || fish_transform.translation.x <= WINDOW_LEFT_X as f32 - (FISH_RADIUS * 2.0)
+        {
             fish_velocity.linvel.x *= -0.9;
             fish_external_force.force.x *= -0.9;
         }
 
-        if fish_transform.translation.y >= WINDOW_TOP_Y as f32 + (FISH_RADIUS * 2.0) ||
-            fish_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (FISH_RADIUS * 2.0) {
+        if fish_transform.translation.y >= WINDOW_TOP_Y as f32 + (FISH_RADIUS * 2.0)
+            || fish_transform.translation.y <= WINDOW_BOTTOM_Y_SEAFLOOR as f32 - (FISH_RADIUS * 2.0)
+        {
             fish_velocity.linvel.y *= -0.9;
             fish_external_force.force.y *= -0.9;
         }
