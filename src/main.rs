@@ -3,8 +3,8 @@ use bevy::{
     //     FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin, SystemInformationDiagnosticsPlugin,
     // },
     math::f32::Vec3,
+    time::common_conditions::on_timer,
     prelude::*,
-    time::common_conditions::on_fixed_timer,
     utils::Duration,
     window::WindowResolution,
 };
@@ -322,7 +322,7 @@ fn main() {
         )
         // Ensure assets are loaded before using them
         .init_collection::<FishSpriteSheet>()
-        .add_startup_systems((setup_camera, setup_background, spawn_fish))
+        .add_systems(Startup, (setup_camera, setup_background, spawn_fish))
         // Load diagnostic plugins
         // SystemInformationDiagnostics don't work if you're dynamic linking. :|
         // .add_plugin(SystemInformationDiagnosticsPlugin::default())
@@ -330,7 +330,7 @@ fn main() {
         // .add_plugin(FrameTimeDiagnosticsPlugin::default())
         // Load physics plugins
         // .add_plugin(RapierDebugRenderPlugin::default())
-        .add_plugin(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(
+        .add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(
             PIXELS_PER_METER,
         ))
         .insert_resource(RapierConfiguration {
@@ -338,16 +338,17 @@ fn main() {
             ..Default::default()
         })
         // .add_plugin(WorldInspectorPlugin::new())
-        .add_system(
-            // Bubbles only get spawned on a scheduled timer
-            spawn_bubble
-                .in_schedule(CoreSchedule::FixedUpdate)
-                .run_if(on_fixed_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
+        // Bubbles only get spawned on a scheduled timer
+        .add_systems(
+            Update,
+                (
+                    spawn_bubble.run_if(on_timer(Duration::from_secs(BUBBLE_SPAWNS_IN_SECS))),
+                )
         )
-        .add_system(bubble_reaper)
-        .add_system(bubble_forces)
-        .add_system(fish_logic)
-        .add_system(fish_constraints)
-        .add_system(animate_sprite)
+        .add_systems(Update, bubble_reaper)
+        .add_systems(Update, bubble_forces)
+        .add_systems(Update, fish_logic)
+        .add_systems(Update, fish_constraints)
+        .add_systems(Update, animate_sprite)
         .run();
 }
